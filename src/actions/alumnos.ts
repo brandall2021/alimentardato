@@ -18,12 +18,23 @@ function detectarTipo(valor: string): 'documento' | 'legajo' | 'email' | 'descon
 }
 
 export interface ResultadoBusqueda {
+  id: string
   valor: string
   tipo: string
   apellidoNombre: string | null
   email: string | null
   telefono: string | null
   encontrado: boolean
+}
+
+export async function actualizarContacto(id: string, email?: string | null, telefono?: string | null) {
+  const data: Record<string, string | null> = {}
+  if (email !== undefined) data.email = email
+  if (telefono !== undefined) data.telefono = telefono
+  await prisma.alumno.update({
+    where: { id },
+    data,
+  })
 }
 
 export async function buscarPorValores(valoresRaw: string): Promise<ResultadoBusqueda[]> {
@@ -39,6 +50,7 @@ export async function buscarPorValores(valoresRaw: string): Promise<ResultadoBus
 
     if (tipo === 'desconocido') {
       resultados.push({
+        id: '',
         valor,
         tipo: 'desconocido',
         apellidoNombre: null,
@@ -62,6 +74,7 @@ export async function buscarPorValores(valoresRaw: string): Promise<ResultadoBus
     const alumnos = await prisma.alumno.findMany({
       where,
       select: {
+        id: true,
         apellidoNombre: true,
         email: true,
         telefono: true,
@@ -72,6 +85,7 @@ export async function buscarPorValores(valoresRaw: string): Promise<ResultadoBus
 
     if (alumnos.length === 0) {
       resultados.push({
+        id: '',
         valor,
         tipo,
         apellidoNombre: null,
@@ -82,6 +96,7 @@ export async function buscarPorValores(valoresRaw: string): Promise<ResultadoBus
     } else {
       for (const a of alumnos) {
         resultados.push({
+          id: a.id,
           valor,
           tipo,
           apellidoNombre: a.apellidoNombre,
@@ -114,6 +129,7 @@ export async function buscarPorFiltros(filtros: FiltrosAvanzados): Promise<Resul
   const alumnos = await prisma.alumno.findMany({
     where,
     select: {
+      id: true,
       apellidoNombre: true,
       email: true,
       telefono: true,
@@ -124,6 +140,7 @@ export async function buscarPorFiltros(filtros: FiltrosAvanzados): Promise<Resul
   })
 
   return alumnos.map((a) => ({
+    id: a.id,
     valor: a.legajo ?? a.numeroDocumento ?? '',
     tipo: 'filtro',
     apellidoNombre: a.apellidoNombre,

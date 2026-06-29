@@ -1,7 +1,14 @@
 'use client'
 
 import { useState, useCallback, useRef } from 'react'
-import { buscarPorValores, buscarPorFiltros, exportarResultados, type ResultadoBusqueda, type FiltrosAvanzados } from '@/actions/alumnos'
+import {
+  buscarPorValores,
+  buscarPorFiltros,
+  exportarResultados,
+  actualizarContacto,
+  type ResultadoBusqueda,
+  type FiltrosAvanzados,
+} from '@/actions/alumnos'
 import { importarDesdeExcel } from '@/actions/importacion'
 
 export default function AlumnosPage() {
@@ -11,6 +18,9 @@ export default function AlumnosPage() {
   const [filtros, setFiltros] = useState<FiltrosAvanzados>({})
   const [importando, setImportando] = useState(false)
   const [mensajeImport, setMensajeImport] = useState('')
+  const [editandoId, setEditandoId] = useState<string | null>(null)
+  const [editCampo, setEditCampo] = useState<'email' | 'telefono' | null>(null)
+  const [editValor, setEditValor] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
 
   const handleBuscar = useCallback(async () => {
@@ -60,6 +70,89 @@ export default function AlumnosPage() {
       if (fileRef.current) fileRef.current.value = ''
     }
   }, [])
+
+  const handleGuardarContacto = useCallback(async (id: string, campo: 'email' | 'telefono', valor: string) => {
+    if (!resultados) return
+    const email = campo === 'email' ? valor || null : undefined
+    const telefono = campo === 'telefono' ? valor || null : undefined
+    await actualizarContacto(id, email, telefono)
+    setResultados((prev) =>
+      prev?.map((r) =>
+        r.id === id ? { ...r, [campo]: valor || null } : r
+      ) ?? null
+    )
+    setEditandoId(null)
+    setEditCampo(null)
+    setEditValor('')
+  }, [resultados])
+
+  const abrirEditor = useCallback((id: string, campo: 'email' | 'telefono', valorActual: string | null) => {
+    setEditandoId(id)
+    setEditCampo(campo)
+    setEditValor(valorActual ?? '')
+  }, [])
+
+  const cerrarEditor = useCallback(() => {
+    setEditandoId(null)
+    setEditCampo(null)
+    setEditValor('')
+  }, [])
+
+  function renderContacto(r: ResultadoBusqueda, campo: 'email' | 'telefono') {
+    const valor = r[campo]
+    const editando = editandoId === r.id && editCampo === campo
+
+    if (editando) {
+      return (
+        <div className="flex items-center gap-1">
+          <input
+            type={campo === 'email' ? 'email' : 'tel'}
+            value={editValor}
+            onChange={(e) => setEditValor(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleGuardarContacto(r.id, campo, editValor)
+              if (e.key === 'Escape') cerrarEditor()
+            }}
+            className="w-full min-w-0 rounded border border-brand px-2 py-1 text-xs focus:outline-none"
+            autoFocus
+          />
+          <button
+            onClick={() => handleGuardarContacto(r.id, campo, editValor)}
+            className="shrink-0 rounded bg-brand px-2 py-1 text-xs text-white hover:bg-blue-700"
+          >
+            OK
+          </button>
+          <button
+            onClick={cerrarEditor}
+            className="shrink-0 rounded bg-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-300"
+          >
+            ✕
+          </button>
+        </div>
+      )
+    }
+
+    if (r.encontrado && valor) {
+      return (
+        <span
+          className="cursor-pointer"
+          onClick={() => abrirEditor(r.id, campo, valor)}
+          title="Editar"
+        >
+          {valor}
+        </span>
+      )
+    }
+
+    return (
+      <button
+        onClick={() => abrirEditor(r.id, campo, '')}
+        className="rounded px-2 py-0.5 text-xs font-medium text-amber-600 ring-1 ring-dashed ring-amber-300 hover:bg-amber-50"
+      >
+        + Agregar {campo === 'email' ? 'email' : 'teléfono'}
+      </button>
+    )
+  }
 
   const encontrados = resultados?.filter((r) => r.encontrado).length ?? 0
   const noEncontrados = resultados?.filter((r) => !r.encontrado).length ?? 0
@@ -201,10 +294,10 @@ export default function AlumnosPage() {
                         {r.encontrado ? r.apellidoNombre : '—'}
                       </td>
                       <td className="px-5 py-3 text-gray-600">
-                        {r.encontrado && r.email ? r.email : '—'}
+                        {renderContacto(r, 'email')}
                       </td>
                       <td className="px-5 py-3 text-gray-600">
-                        {r.encontrado && r.telefono ? r.telefono : '—'}
+                        {renderContacto(r, 'telefono')}
                       </td>
                       <td className="px-5 py-3">
                         {r.encontrado ? (
