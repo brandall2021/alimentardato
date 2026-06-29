@@ -1,6 +1,7 @@
 'use server'
 
 import { prisma } from '@/lib/prisma'
+import { auth } from '@/lib/auth'
 import { Prisma } from '@/generated/prisma/client'
 
 function detectarTipo(valor: string): 'documento' | 'legajo' | 'email' | 'desconocido' {
@@ -15,6 +16,29 @@ function detectarTipo(valor: string): 'documento' | 'legajo' | 'email' | 'descon
   if (/^[A-Z]{2,3}\d+$/i.test(trimmed)) return 'documento'
 
   return 'desconocido'
+}
+
+async function registrarConsulta(opts: {
+  tipo: string
+  valores: string
+  resultados: number
+  filtros?: string
+}) {
+  try {
+    const session = await auth()
+    await prisma.consulta.create({
+      data: {
+        usuario: session?.user?.email ?? session?.user?.name ?? 'anónimo',
+        email: session?.user?.email ?? null,
+        tipo: opts.tipo,
+        valores: opts.valores,
+        resultados: opts.resultados,
+        filtros: opts.filtros ?? null,
+      },
+    })
+  } catch {
+    // no romper la búsqueda si falla el log
+  }
 }
 
 export interface ResultadoBusqueda {
@@ -108,6 +132,12 @@ export async function buscarPorValores(valoresRaw: string): Promise<ResultadoBus
     }
   }
 
+  registrarConsulta({
+    tipo: 'valores',
+    valores: valoresRaw,
+    resultados: resultados.filter((r) => r.encontrado).length,
+  })
+
   return resultados
 }
 
@@ -139,7 +169,7 @@ export async function buscarPorFiltros(filtros: FiltrosAvanzados): Promise<Resul
     orderBy: { apellidoNombre: 'asc' },
   })
 
-  return alumnos.map((a) => ({
+  const resultados = alumnos.map((a) => ({
     id: a.id,
     valor: a.legajo ?? a.numeroDocumento ?? '',
     tipo: 'filtro',
@@ -148,6 +178,15 @@ export async function buscarPorFiltros(filtros: FiltrosAvanzados): Promise<Resul
     telefono: a.telefono,
     encontrado: true,
   }))
+
+  registrarConsulta({
+    tipo: 'filtros',
+    valores: '',
+    resultados: resultados.length,
+    filtros: JSON.stringify(filtros),
+  })
+
+  return resultados
 }
 
 export async function exportarResultados(resultados: ResultadoBusqueda[]) {

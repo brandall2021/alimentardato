@@ -60,6 +60,20 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+model Consulta {
+  id        String   @id @default(cuid())
+  usuario   String
+  email     String?
+  tipo      String
+  valores   String
+  resultados Int     @default(0)
+  filtros   String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([usuario])
+}
+
 model Alumno {
   id                  String        @id @default(cuid())
   apellidoNombre      String

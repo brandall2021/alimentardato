@@ -33,6 +33,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               >
                 Alumnos
               </Link>
+              <Link
+                href="/admin/consultas"
+                className="text-sm font-semibold text-gray-600 hover:text-brand"
+              >
+                Historial
+              </Link>
             </div>
           </div>
           <div className="flex items-center gap-3">
