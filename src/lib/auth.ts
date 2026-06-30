@@ -15,9 +15,15 @@ async function getDevCredentials() {
   return null
 }
 
+const authSecret = process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET
+
+if (!authSecret && process.env.NODE_ENV === 'production') {
+  console.warn('[auth] NEXTAUTH_SECRET no está definido — se usará un secreto generado en memoria. Las sesiones se perderán al reiniciar.')
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: authSecret || crypto.randomUUID(),
   providers: [
     CredentialsProvider({
       id: 'credentials',
