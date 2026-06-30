@@ -6,7 +6,7 @@ Sistema de búsqueda y consulta de alumnos. Permite buscar por N° de Documento,
 
 - **Framework:** Next.js 16 (App Router)
 - **ORM:** Prisma 7 + PostgreSQL
-- **Autenticación:** NextAuth v5 con Google OAuth
+- **Autenticación:** NextAuth v5 con credenciales (email/contraseña)
 - **Estilos:** Tailwind CSS v4
 - **Import/Export:** SheetJS (xlsx)
 
@@ -17,7 +17,7 @@ Sistema de búsqueda y consulta de alumnos. Permite buscar por N° de Documento,
 - **Resultados:** tabla con Apellido y Nombre, Email y Teléfono. Los valores no encontrados se marcan como "No encontrado".
 - **Exportar a Excel:** descarga los resultados en formato .xlsx.
 - **Importar desde Excel:** carga una base existente mapeando columnas con nombres alternativos (soporta múltiples formatos).
-- **Control de acceso:** login con Google OAuth o credenciales de desarrollo, solo usuarios autorizados pueden acceder.
+- **Control de acceso:** login con email y contraseña, solo usuarios autorizados pueden acceder.
 - **Dashboard:** resumen de alumnos, acceso rápido a planes y años de ingreso.
 - **Historial de consultas:** registro de quién buscó qué y cuándo.
 - **Edición inline:** completar email o teléfono faltante directamente desde los resultados.
@@ -51,18 +51,14 @@ pnpm db:seed
 pnpm dev
 ```
 
-### Login en desarrollo
+### Login
 
-El proyecto incluye un proveedor de credenciales para desarrollo. Configurar en `.env`:
+El login usa email y contraseña. Configurar en `.env` o desde la sección **Configuración** del panel admin:
 
 ```
 DEV_EMAIL=admin@alimentardato.com
 DEV_PASSWORD=admin123
 ```
-
-Al detectar estas variables, la pantalla de login muestra un formulario de email/contraseña en lugar de Google OAuth.
-
-Para producción, simplemente no definir `DEV_EMAIL`/`DEV_PASSWORD` y configurar `AUTH_GOOGLE_ID`/`AUTH_GOOGLE_SECRET`.
 
 ## Despliegue en Dokploy
 
@@ -70,8 +66,8 @@ Para producción, simplemente no definir `DEV_EMAIL`/`DEV_PASSWORD` y configurar
 
 ```bash
 docker build -t alimentardato .
-docker tag alimentardato ghcr.io/tu-usuario/alimentardato:latest
-docker push ghcr.io/tu-usuario/alimentardato:latest
+docker tag alimentardato ghcr.io/brandall2021/alimentardato:latest
+docker push ghcr.io/brandall2021/alimentardato:latest
 ```
 
 ### 2. Configurar en Dokploy
@@ -79,7 +75,7 @@ docker push ghcr.io/tu-usuario/alimentardato:latest
 | Campo | Valor |
 |---|---|
 | **Nombre** | `alimentardato` |
-| **Imagen** | `ghcr.io/tu-usuario/alimentardato:latest` |
+| **Imagen** | `ghcr.io/brandall2021/alimentardato:latest` |
 | **Puerto interno** | `3000` |
 | **Tipo** | HTTP |
 
@@ -87,11 +83,8 @@ docker push ghcr.io/tu-usuario/alimentardato:latest
 
 ```
 DATABASE_URL=postgresql://user:pass@host:5432/alimentardato
-AUTH_GOOGLE_ID=tu-client-id
-AUTH_GOOGLE_SECRET=tu-client-secret
 NEXTAUTH_URL=https://alimentardato.tudominio.com
 NEXTAUTH_SECRET=genera-con-openssl-rand-base64-32
-ADMIN_EMAIL=admin@example.com
 ```
 
 ### 4. Base de datos PostgreSQL en Dokploy
