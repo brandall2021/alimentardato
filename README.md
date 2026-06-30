@@ -60,17 +60,11 @@ DEV_EMAIL=admin@alimentardato.com
 DEV_PASSWORD=admin123
 ```
 
-## Despliegue en Dokploy
+## Despliegue automático (GitHub Actions → ghcr.io → Dokploy)
 
-### 1. Construir y pushear la imagen Docker
+Cada push a `main` ejecuta el workflow `.github/workflows/deploy.yml` que construye la imagen Docker y la sube a `ghcr.io/brandall2021/alimentardato:latest`.
 
-```bash
-docker build -t alimentardato .
-docker tag alimentardato ghcr.io/brandall2021/alimentardato:latest
-docker push ghcr.io/brandall2021/alimentardato:latest
-```
-
-### 2. Configurar en Dokploy
+### Configurar en Dokploy
 
 | Campo | Valor |
 |---|---|
@@ -79,7 +73,9 @@ docker push ghcr.io/brandall2021/alimentardato:latest
 | **Puerto interno** | `3000` |
 | **Tipo** | HTTP |
 
-### 3. Variables de entorno en Dokploy
+En Dokploy, habilitar **Watchtower** o un webhook para que redeploye automáticamente cuando se actualice la imagen.
+
+### Variables de entorno en Dokploy
 
 ```
 DATABASE_URL=postgresql://user:pass@host:5432/alimentardato
@@ -87,18 +83,9 @@ NEXTAUTH_URL=https://alimentardato.tudominio.com
 NEXTAUTH_SECRET=genera-con-openssl-rand-base64-32
 ```
 
-### 4. Base de datos PostgreSQL en Dokploy
+### Migraciones
 
-Crear un servicio PostgreSQL desde el panel de Dokploy y usar los datos de conexión en `DATABASE_URL`.
-
-Luego ejecutar las migraciones:
-
-```bash
-# Acceder al contenedor y ejecutar
-npx prisma migrate deploy
-```
-
-O configurar un script de post-deploy en Dokploy que ejecute:
+Ejecutar desde la terminal del contenedor en Dokploy:
 
 ```bash
 npx prisma generate && npx prisma migrate deploy
