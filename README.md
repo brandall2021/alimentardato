@@ -17,14 +17,15 @@ Sistema de búsqueda y consulta de alumnos. Permite buscar por N° de Documento,
 - **Resultados:** tabla con Apellido y Nombre, Email y Teléfono. Los valores no encontrados se marcan como "No encontrado".
 - **Exportar a Excel:** descarga los resultados en formato .xlsx.
 - **Importar desde Excel:** carga una base existente mapeando columnas con nombres alternativos (soporta múltiples formatos).
-- **Control de acceso:** login con Google OAuth, solo usuarios autorizados pueden acceder.
+- **Control de acceso:** login con Google OAuth o credenciales de desarrollo, solo usuarios autorizados pueden acceder.
 - **Dashboard:** resumen de alumnos, acceso rápido a planes y años de ingreso.
+- **Historial de consultas:** registro de quién buscó qué y cuándo.
+- **Edición inline:** completar email o teléfono faltante directamente desde los resultados.
 
 ## Requisitos
 
 - Node.js 20+
 - PostgreSQL
-- Google OAuth credentials (console.cloud.google.com)
 
 ## Configuración local
 
@@ -38,7 +39,7 @@ pnpm install
 
 # Configurar variables de entorno
 cp .env.example .env
-# Editar .env con: DATABASE_URL, AUTH_GOOGLE_ID, AUTH_GOOGLE_SECRET, NEXTAUTH_SECRET, ADMIN_EMAIL
+# Editar .env con: DATABASE_URL
 
 # Crear la base de datos
 pnpm prisma migrate dev --name init
@@ -49,6 +50,19 @@ pnpm db:seed
 # Iniciar en desarrollo
 pnpm dev
 ```
+
+### Login en desarrollo
+
+El proyecto incluye un proveedor de credenciales para desarrollo. Configurar en `.env`:
+
+```
+DEV_EMAIL=admin@alimentardato.com
+DEV_PASSWORD=admin123
+```
+
+Al detectar estas variables, la pantalla de login muestra un formulario de email/contraseña en lugar de Google OAuth.
+
+Para producción, simplemente no definir `DEV_EMAIL`/`DEV_PASSWORD` y configurar `AUTH_GOOGLE_ID`/`AUTH_GOOGLE_SECRET`.
 
 ## Despliegue en Dokploy
 
