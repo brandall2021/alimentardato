@@ -4,12 +4,24 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import { PrismaAdapter } from '@auth/prisma-adapter'
 import { prisma } from './prisma'
 
-const devEmail = process.env.DEV_EMAIL
-const devPassword = process.env.DEV_PASSWORD
+async function getDevCredentials() {
+  const envEmail = process.env.DEV_EMAIL
+  const envPassword = process.env.DEV_PASSWORD
+  if (envEmail && envPassword) return { email: envEmail, password: envPassword }
+  try {
+    const dbEmail = await prisma.configuracion.findUnique({ where: { clave: 'dev_email' } })
+    const dbPass = await prisma.configuracion.findUnique({ where: { clave: 'dev_password' } })
+    if (dbEmail?.valor && dbPass?.valor) return { email: dbEmail.valor, password: dbPass.valor }
+  } catch {}
+  return null
+}
 
 const providers = []
 
-if (devEmail && devPassword) {
+const devCredentials = await getDevCredentials()
+
+if (devCredentials) {
+  const { email: devEmail, password: devPassword } = devCredentials
   providers.push(
     CredentialsProvider({
       name: 'Desarrollo',
@@ -42,7 +54,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   providers,
   callbacks: {
     async signIn({ user }) {
-      if (devEmail && user.email === devEmail) return true
+      const creds = await getDevCredentials()
+      if (creds && user.email === creds.email) return true
       const adminEmail = process.env.ADMIN_EMAIL
       const existing = await prisma.user.findUnique({
         where: { email: user.email! },

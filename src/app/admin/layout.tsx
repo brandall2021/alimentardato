@@ -39,6 +39,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               >
                 Historial
               </Link>
+              <Link
+                href="/admin/configuracion"
+                className="text-sm font-semibold text-gray-600 hover:text-brand"
+              >
+                Configuración
+              </Link>
             </div>
           </div>
           <div className="flex items-center gap-3">

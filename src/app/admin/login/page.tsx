@@ -1,13 +1,19 @@
 import { auth, signIn } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 
 export default async function LoginPage() {
   const session = await auth()
   if (session) redirect('/admin')
 
-  const devEmail = process.env.DEV_EMAIL
-  const devPassword = process.env.DEV_PASSWORD
-  const modoDev = !!(devEmail && devPassword)
+  const envOk = !!(process.env.DEV_EMAIL && process.env.DEV_PASSWORD)
+  let dbOk = false
+  try {
+    const dbEmail = await prisma.configuracion.findUnique({ where: { clave: 'dev_email' } })
+    const dbPass = await prisma.configuracion.findUnique({ where: { clave: 'dev_password' } })
+    dbOk = !!(dbEmail?.valor && dbPass?.valor)
+  } catch {}
+  const modoDev = envOk || dbOk
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50">

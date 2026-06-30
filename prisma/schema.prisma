@@ -60,6 +60,12 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+model Configuracion {
+  id    String @id @default(cuid())
+  clave String @unique
+  valor String
+}
+
 model Consulta {
   id        String   @id @default(cuid())
   usuario   String
