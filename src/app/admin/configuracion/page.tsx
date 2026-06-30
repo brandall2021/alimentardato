@@ -10,7 +10,7 @@ export default async function ConfiguracionPage() {
   return (
     <div className="space-y-6">
       <header>
-        <p className="text-sm font-semibold uppercase tracking-wide text-brand">Administración</p>
+        <p className="text-sm font-semibold uppercase tracking-wide text-accent">Administración</p>
         <h1 className="mt-1 text-2xl font-bold">Configuración</h1>
       </header>
 

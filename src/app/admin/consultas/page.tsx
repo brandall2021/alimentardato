@@ -14,7 +14,7 @@ export default async function ConsultasPage({
   return (
     <div className="space-y-6">
       <header>
-        <p className="text-sm font-semibold uppercase tracking-wide text-brand">Historial</p>
+        <p className="text-sm font-semibold uppercase tracking-wide text-accent">Historial</p>
         <h1 className="mt-1 text-2xl font-bold">Consultas realizadas</h1>
         <p className="mt-1 text-sm text-gray-500">{total} consulta{total !== 1 ? 's' : ''} registrada{total !== 1 ? 's' : ''}</p>
       </header>

@@ -161,7 +161,7 @@ export default function AlumnosPage() {
     <div className="space-y-6">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-brand">Consultas</p>
+          <p className="text-sm font-semibold uppercase tracking-wide text-accent">Consultas</p>
           <h1 className="mt-1 text-2xl font-bold">Búsqueda de Alumnos</h1>
         </div>
         <div className="flex flex-wrap gap-2">

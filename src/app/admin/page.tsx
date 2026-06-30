@@ -22,7 +22,7 @@ export default async function AdminDashboard() {
   return (
     <div className="space-y-6">
       <header>
-        <p className="text-sm font-semibold uppercase tracking-wide text-brand">Panel administrativo</p>
+        <p className="text-sm font-semibold uppercase tracking-wide text-accent">Panel administrativo</p>
         <h1 className="mt-1 text-2xl font-bold">Dashboard</h1>
       </header>
 

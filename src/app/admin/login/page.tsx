@@ -1,4 +1,5 @@
 import { auth, signIn } from '@/lib/auth'
+import Image from 'next/image'
 import { redirect } from 'next/navigation'
 
 export default async function LoginPage() {
@@ -6,10 +7,24 @@ export default async function LoginPage() {
   if (session) redirect('/admin')
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50">
-      <div className="w-full max-w-sm rounded-lg border border-gray-200 bg-white p-8 shadow-sm">
-        <h1 className="mb-2 text-center text-2xl font-bold">Alimentar Dato</h1>
-        <p className="mb-6 text-center text-sm text-gray-500">Sistema de consulta de alumnos</p>
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-white via-red-50 to-white px-4">
+      <div className="mb-8 text-center">
+        <Image
+          src="/logo-face.png"
+          alt="FACET"
+          width={220}
+          height={42}
+          className="mx-auto h-10 w-auto"
+          priority
+        />
+        <p className="mt-2 text-xs text-gray-400">
+          Facultad de Ciencias Económicas · Universidad Nacional de Tucumán
+        </p>
+      </div>
+
+      <div className="w-full max-w-sm rounded-lg border border-gray-200 bg-white p-8 shadow-lg">
+        <h1 className="mb-1 text-center text-xl font-heading font-bold text-gray-800">Alimentar Dato</h1>
+        <p className="mb-6 text-center text-sm text-gray-400">Sistema de consulta de alumnos</p>
 
         <form
           action={async (formData: FormData) => {
@@ -31,7 +46,7 @@ export default async function LoginPage() {
               name="email"
               type="email"
               required
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm transition focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
             />
           </div>
           <div>
@@ -43,17 +58,19 @@ export default async function LoginPage() {
               name="password"
               type="password"
               required
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm transition focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
             />
           </div>
           <button
             type="submit"
-            className="w-full rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+            className="w-full rounded-md bg-brand px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-dark focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2"
           >
             Iniciar sesión
           </button>
         </form>
       </div>
+
+      <p className="mt-8 text-xs text-gray-300">© {new Date().getFullYear()} FACET · UNT</p>
     </div>
   )
 }
