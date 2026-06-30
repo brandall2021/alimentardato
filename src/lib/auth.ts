@@ -16,46 +16,41 @@ async function getDevCredentials() {
   return null
 }
 
-const providers = []
+async function tieneCredenciales() {
+  const c = await getDevCredentials()
+  return c !== null
+}
 
-const devCredentials = await getDevCredentials()
-
-if (devCredentials) {
-  const { email: devEmail, password: devPassword } = devCredentials
-  providers.push(
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  adapter: PrismaAdapter(prisma),
+  providers: [
     CredentialsProvider({
+      id: 'credentials',
       name: 'Desarrollo',
       credentials: {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Contraseña', type: 'password' },
       },
       async authorize(credentials) {
+        const creds = await getDevCredentials()
+        if (!creds) return null
         if (
-          credentials?.email === devEmail &&
-          credentials?.password === devPassword
+          credentials?.email === creds.email &&
+          credentials?.password === creds.password
         ) {
-          return { id: 'dev', email: devEmail, name: 'Desarrollo' }
+          return { id: 'dev', email: creds.email, name: 'Desarrollo' }
         }
         return null
       },
-    })
-  )
-} else {
-  providers.push(
+    }),
     GoogleProvider({
       clientId: process.env.AUTH_GOOGLE_ID ?? '',
       clientSecret: process.env.AUTH_GOOGLE_SECRET ?? '',
-    })
-  )
-}
-
-export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: PrismaAdapter(prisma),
-  providers,
+    }),
+  ],
   callbacks: {
-    async signIn({ user }) {
-      const creds = await getDevCredentials()
-      if (creds && user.email === creds.email) return true
+    async signIn({ user, account }) {
+      if (account?.provider === 'credentials') return true
       const adminEmail = process.env.ADMIN_EMAIL
       const existing = await prisma.user.findUnique({
         where: { email: user.email! },

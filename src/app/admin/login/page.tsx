@@ -1,19 +1,9 @@
 import { auth, signIn } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 
 export default async function LoginPage() {
   const session = await auth()
   if (session) redirect('/admin')
-
-  const envOk = !!(process.env.DEV_EMAIL && process.env.DEV_PASSWORD)
-  let dbOk = false
-  try {
-    const dbEmail = await prisma.configuracion.findUnique({ where: { clave: 'dev_email' } })
-    const dbPass = await prisma.configuracion.findUnique({ where: { clave: 'dev_password' } })
-    dbOk = !!(dbEmail?.valor && dbPass?.valor)
-  } catch {}
-  const modoDev = envOk || dbOk
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50">
@@ -21,64 +11,67 @@ export default async function LoginPage() {
         <h1 className="mb-2 text-center text-2xl font-bold">Alimentar Dato</h1>
         <p className="mb-6 text-center text-sm text-gray-500">Sistema de consulta de alumnos</p>
 
-        {modoDev ? (
-          <form
-            action={async (formData: FormData) => {
-              'use server'
-              await signIn('credentials', {
-                email: formData.get('email'),
-                password: formData.get('password'),
-                redirectTo: '/admin/alumnos',
-              })
-            }}
-            className="space-y-4"
+        <form
+          action={async (formData: FormData) => {
+            'use server'
+            await signIn('credentials', {
+              email: formData.get('email'),
+              password: formData.get('password'),
+              redirectTo: '/admin/alumnos',
+            })
+          }}
+          className="space-y-4"
+        >
+          <div>
+            <label htmlFor="email" className="mb-1 block text-sm font-medium text-gray-700">
+              Email
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              required
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+            />
+          </div>
+          <div>
+            <label htmlFor="password" className="mb-1 block text-sm font-medium text-gray-700">
+              Contraseña
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              required
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+            />
+          </div>
+          <button
+            type="submit"
+            className="w-full rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
           >
-            <div>
-              <label htmlFor="email" className="mb-1 block text-sm font-medium text-gray-700">
-                Email
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                required
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
-              />
-            </div>
-            <div>
-              <label htmlFor="password" className="mb-1 block text-sm font-medium text-gray-700">
-                Contraseña
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
-              />
-            </div>
-            <button
-              type="submit"
-              className="w-full rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
-            >
-              Iniciar sesión
-            </button>
-          </form>
-        ) : (
-          <form
-            action={async () => {
-              'use server'
-              await signIn('google', { redirectTo: '/admin/alumnos' })
-            }}
+            Iniciar sesión
+          </button>
+        </form>
+
+        <div className="mt-4 text-center text-xs text-gray-400">
+          También podés iniciar sesión con
+        </div>
+
+        <form
+          action={async () => {
+            'use server'
+            await signIn('google', { redirectTo: '/admin/alumnos' })
+          }}
+          className="mt-2"
+        >
+          <button
+            type="submit"
+            className="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
           >
-            <button
-              type="submit"
-              className="w-full rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
-            >
-              Iniciar sesión con Google
-            </button>
-          </form>
-        )}
+            Google
+          </button>
+        </form>
       </div>
     </div>
   )
