@@ -16,6 +16,7 @@ async function getDevCredentials() {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  trustHost: true,
   providers: [
     CredentialsProvider({
       id: 'credentials',
