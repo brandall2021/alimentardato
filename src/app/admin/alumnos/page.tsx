@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback } from 'react'
 import {
   buscarPorValores,
   buscarPorFiltros,
@@ -9,19 +9,15 @@ import {
   type ResultadoBusqueda,
   type FiltrosAvanzados,
 } from '@/actions/alumnos'
-import { importarDesdeExcel } from '@/actions/importacion'
 
 export default function AlumnosPage() {
   const [valores, setValores] = useState('')
   const [resultados, setResultados] = useState<ResultadoBusqueda[] | null>(null)
   const [buscando, setBuscando] = useState(false)
   const [filtros, setFiltros] = useState<FiltrosAvanzados>({})
-  const [importando, setImportando] = useState(false)
-  const [mensajeImport, setMensajeImport] = useState('')
   const [editandoId, setEditandoId] = useState<string | null>(null)
   const [editCampo, setEditCampo] = useState<'email' | 'telefono' | null>(null)
   const [editValor, setEditValor] = useState('')
-  const fileRef = useRef<HTMLInputElement>(null)
 
   const handleBuscar = useCallback(async () => {
     if (!valores.trim() && !filtros.plan && !filtros.anoIngreso && !filtros.estadoInscripcion) return
@@ -47,29 +43,6 @@ export default function AlumnosPage() {
     link.download = 'alumnos_resultados.xlsx'
     link.click()
   }, [resultados])
-
-  const handleImport = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    setImportando(true)
-    setMensajeImport('')
-    try {
-      const buf = await file.arrayBuffer()
-      const b64 = Buffer.from(buf).toString('base64')
-      const res = await importarDesdeExcel(b64)
-      setMensajeImport(`Importados: ${res.importados}, Errores: ${res.errores}`)
-      if (res.errores > 0) {
-        setMensajeImport((prev) => `${prev}. Revisá la consola para más detalles.`)
-        console.table(res.detalles.filter((d) => !d.exito))
-      }
-    } catch (err) {
-      setMensajeImport(`Error al importar: ${err instanceof Error ? err.message : 'desconocido'}`)
-    } finally {
-      setImportando(false)
-      if (fileRef.current) fileRef.current.value = ''
-    }
-  }, [])
 
   const handleGuardarContacto = useCallback(async (id: string, campo: 'email' | 'telefono', valor: string) => {
     if (!resultados) return
@@ -164,26 +137,7 @@ export default function AlumnosPage() {
           <p className="text-sm font-semibold uppercase tracking-wide text-accent">Consultas</p>
           <h1 className="mt-1 text-2xl font-bold">Búsqueda de Alumnos</h1>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <label className="cursor-pointer rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
-            {importando ? 'Importando...' : 'Importar Excel'}
-            <input
-              ref={fileRef}
-              type="file"
-              accept=".xlsx,.xls,.csv"
-              className="hidden"
-              onChange={handleImport}
-              disabled={importando}
-            />
-          </label>
-        </div>
       </header>
-
-      {mensajeImport && (
-        <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-          {mensajeImport}
-        </div>
-      )}
 
       <section className="rounded-md border border-gray-200 bg-white shadow-sm">
         <div className="border-b border-gray-200 px-5 py-4">
