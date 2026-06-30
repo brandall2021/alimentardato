@@ -53,25 +53,6 @@ export default async function LoginPage() {
             Iniciar sesión
           </button>
         </form>
-
-        <div className="mt-4 text-center text-xs text-gray-400">
-          También podés iniciar sesión con
-        </div>
-
-        <form
-          action={async () => {
-            'use server'
-            await signIn('google', { redirectTo: '/admin/alumnos' })
-          }}
-          className="mt-2"
-        >
-          <button
-            type="submit"
-            className="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
-          >
-            Google
-          </button>
-        </form>
       </div>
     </div>
   )
