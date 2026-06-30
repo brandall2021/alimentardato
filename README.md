@@ -67,7 +67,7 @@ Dokploy puede desplegar directamente desde el repositorio de GitHub. Configurarl
 | Campo | Valor |
 |---|---|
 | **Repositorio** | `https://github.com/brandall2021/alimentardato` |
-| **Rama** | `main` |
+| **Rama** | `principal` |
 | **Puerto interno** | `3000` |
 | **Comando de build** | `npm run build` |
 | **Comando de start** | `npm start` |
@@ -85,4 +85,4 @@ NEXTAUTH_URL=https://alimentardato.tudominio.com
 NEXTAUTH_SECRET=genera-con-openssl-rand-base64-32
 ```
 
-Cada push a `main` dispara un redeploy automático desde Dokploy.
+Cada push a `principal` dispara un redeploy automático desde Dokploy.
