@@ -16,7 +16,7 @@ Sistema de búsqueda y consulta de alumnos. Permite buscar por N° de Documento,
 - **Filtros adicionales:** buscar por Plan, Año Ingreso o Estado de inscripción para listar grupos completos de alumnos.
 - **Resultados:** tabla con Apellido y Nombre, Email y Teléfono. Los valores no encontrados se marcan como "No encontrado".
 - **Exportar a Excel:** descarga los resultados en formato .xlsx.
-- **Importar desde Excel:** carga una base existente mapeando columnas con nombres alternativos (soporta múltiples formatos).
+- **Importar desde Excel:** carga una base existente mapeando columnas con nombres alternativos (soporta múltiples formatos). Disponible en **Configuración**.
 - **Control de acceso:** login con email y contraseña, solo usuarios autorizados pueden acceder.
 - **Dashboard:** resumen de alumnos, acceso rápido a planes y años de ingreso.
 - **Historial de consultas:** registro de quién buscó qué y cuándo.
@@ -69,8 +69,8 @@ Dokploy puede desplegar directamente desde el repositorio de GitHub. Configurarl
 | **Repositorio** | `https://github.com/brandall2021/alimentardato` |
 | **Rama** | `principal` |
 | **Puerto interno** | `3000` |
-| **Comando de build** | `npm run build` |
-| **Comando de start** | `npm start` |
+| **Comando de build** | `pnpm run build` |
+| **Comando de start** | `pnpm start` |
 | **Tipo** | HTTP |
 
 ### Dockerfile
@@ -83,6 +83,15 @@ El proyecto incluye un `Dockerfile` multi-stage listo para producción.
 DATABASE_URL=postgresql://user:pass@host:5432/alimentardato
 NEXTAUTH_URL=https://alimentardato.tudominio.com
 NEXTAUTH_SECRET=genera-con-openssl-rand-base64-32
+AUTH_TRUST_HOST=true
 ```
 
+> **Nota:** `AUTH_TRUST_HOST=true` es necesario en Dokploy por sus URLs dinámicas (ej. `*.sslip.io`). Si ya se configuró `trustHost: true` en el código, se puede omitir.
+
 Cada push a `principal` dispara un redeploy automático desde Dokploy.
+
+### Migraciones en producción
+
+```bash
+pnpm prisma migrate deploy
+```
