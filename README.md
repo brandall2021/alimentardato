@@ -60,20 +60,22 @@ DEV_EMAIL=admin@alimentardato.com
 DEV_PASSWORD=admin123
 ```
 
-## Despliegue automático (GitHub Actions → ghcr.io → Dokploy)
+## Despliegue en Dokploy
 
-Cada push a `main` ejecuta el workflow `.github/workflows/deploy.yml` que construye la imagen Docker y la sube a `ghcr.io/brandall2021/alimentardato:latest`.
-
-### Configurar en Dokploy
+Dokploy puede desplegar directamente desde el repositorio de GitHub. Configurarlo así:
 
 | Campo | Valor |
 |---|---|
-| **Nombre** | `alimentardato` |
-| **Imagen** | `ghcr.io/brandall2021/alimentardato:latest` |
+| **Repositorio** | `https://github.com/brandall2021/alimentardato` |
+| **Rama** | `main` |
 | **Puerto interno** | `3000` |
+| **Comando de build** | `npm run build` |
+| **Comando de start** | `npm start` |
 | **Tipo** | HTTP |
 
-En Dokploy, habilitar **Watchtower** o un webhook para que redeploye automáticamente cuando se actualice la imagen.
+### Dockerfile
+
+El proyecto incluye un `Dockerfile` multi-stage listo para producción.
 
 ### Variables de entorno en Dokploy
 
@@ -83,10 +85,4 @@ NEXTAUTH_URL=https://alimentardato.tudominio.com
 NEXTAUTH_SECRET=genera-con-openssl-rand-base64-32
 ```
 
-### Migraciones
-
-Ejecutar desde la terminal del contenedor en Dokploy:
-
-```bash
-npx prisma generate && npx prisma migrate deploy
-```
+Cada push a `main` dispara un redeploy automático desde Dokploy.
