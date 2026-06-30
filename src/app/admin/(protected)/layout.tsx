@@ -1,21 +1,13 @@
 import { auth, signOut } from '@/lib/auth'
+import { redirect } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 
-export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
 
   if (!session) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <div className="text-center">
-          <p className="text-gray-500">No autorizado.</p>
-          <Link href="/admin/login" className="text-accent hover:underline">
-            Iniciar sesión
-          </Link>
-        </div>
-      </div>
-    )
+    redirect('/admin/login')
   }
 
   return (
