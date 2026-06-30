@@ -18,8 +18,8 @@ export default async function ConfiguracionPage() {
         <div className="border-b border-gray-200 px-5 py-4">
           <h2 className="text-base font-bold">Acceso por credenciales</h2>
           <p className="text-sm text-gray-500">
-            Configurá un email y contraseña para iniciar sesión sin Google OAuth (útil para desarrollo).
-            Si están vacíos, se usará Google OAuth.
+            Configurá el email y contraseña para iniciar sesión en la aplicación.
+            Si están vacíos, se usarán las variables DEV_EMAIL y DEV_PASSWORD del entorno.
           </p>
         </div>
         <form
