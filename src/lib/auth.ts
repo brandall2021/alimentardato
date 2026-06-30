@@ -42,14 +42,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         } else if (credentials?.password !== creds.password) {
           return null
         }
-        return { id: 'dev', email: creds.email, name: 'Desarrollo' }
+        return { id: 'dev', email: creds.email, name: 'Desarrollo', role: 'ADMIN' }
       },
     }),
   ],
   callbacks: {
-    async session({ session, user }) {
-      session.user.id = user.id
-      session.user.role = (user as { role?: string }).role ?? 'ADMIN'
+    async jwt({ token, user }) {
+      if (user) {
+        token.role = user.role ?? 'ADMIN'
+      }
+      return token
+    },
+    async session({ session, token }) {
+      if (token.sub) session.user.id = token.sub
+      if (token.role) session.user.role = token.role as string
       return session
     },
   },
