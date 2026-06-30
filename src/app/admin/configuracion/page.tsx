@@ -5,7 +5,7 @@ export const metadata = { title: 'Configuración | Alimentar Dato' }
 export default async function ConfiguracionPage() {
   const config = await obtenerConfig()
   const devEmail = config.dev_email ?? ''
-  const devPassword = config.dev_password ?? ''
+  const hasPassword = config.dev_password_set === 'true'
 
   return (
     <div className="space-y-6">
@@ -26,7 +26,11 @@ export default async function ConfiguracionPage() {
           action={async (formData: FormData) => {
             'use server'
             await guardarConfig('dev_email', (formData.get('email') as string) ?? '')
-            await guardarConfig('dev_password', (formData.get('password') as string) ?? '')
+            const pass = (formData.get('password') as string) ?? ''
+            if (pass) {
+              await guardarConfig('dev_password', pass)
+              await guardarConfig('dev_password_set', 'true')
+            }
           }}
           className="space-y-4 px-5 py-4"
         >
@@ -44,13 +48,13 @@ export default async function ConfiguracionPage() {
           </div>
           <div>
             <label htmlFor="password" className="mb-1 block text-sm font-medium text-gray-700">
-              Contraseña
+              {hasPassword ? 'Nueva contraseña (dejar vacío para mantener)' : 'Contraseña'}
             </label>
             <input
               id="password"
               name="password"
-              type="text"
-              defaultValue={devPassword}
+              type="password"
+              placeholder={hasPassword ? '········' : ''}
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
             />
           </div>

@@ -1,6 +1,8 @@
 'use server'
 
 import { prisma } from '@/lib/prisma'
+import { requireAdmin } from '@/lib/auth-guard'
+import { importarExcelSchema, validarImportacionRows } from '@/lib/validations'
 import { revalidatePath } from 'next/cache'
 
 type TipoDocumento = 'DNI' | 'LE' | 'LC' | 'PASAPORTE'
@@ -63,12 +65,15 @@ export async function importarDesdeExcel(base64: string): Promise<{
   errores: number
   detalles: ResultadoImportacion[]
 }> {
+  await requireAdmin()
+  importarExcelSchema.parse(base64)
   const XLSX = await import('xlsx')
 
   const buf = Buffer.from(base64, 'base64')
   const wb = XLSX.read(buf, { type: 'buffer' })
   const ws = wb.Sheets[wb.SheetNames[0]]
   const rows: Record<string, unknown>[] = XLSX.utils.sheet_to_json(ws, { defval: null })
+  validarImportacionRows(rows.length)
 
   const resultados: ResultadoImportacion[] = []
   let ok = 0
@@ -119,14 +124,16 @@ export async function importarDesdeExcel(base64: string): Promise<{
         paisOrigen: limpiarString(row['País de Origen'] ?? row['pais_origen']),
       }
 
-      const existing = await prisma.alumno.findFirst({
-        where: { numeroDocumento },
+      await prisma.alumno.upsert({
+        where: {
+          tipoDocumento_numeroDocumento: {
+            tipoDocumento: tipoDocumento as TipoDocumento,
+            numeroDocumento,
+          },
+        },
+        create: data,
+        update: data,
       })
-      if (existing) {
-        await prisma.alumno.update({ where: { id: existing.id }, data })
-      } else {
-        await prisma.alumno.create({ data })
-      }
 
       resultados.push({ fila, exito: true })
       ok++

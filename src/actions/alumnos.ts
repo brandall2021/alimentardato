@@ -2,6 +2,8 @@
 
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
+import { requireAdmin } from '@/lib/auth-guard'
+import { buscarValoresSchema, filtrosSchema, actualizarContactoSchema } from '@/lib/validations'
 import { Prisma } from '@/generated/prisma/client'
 
 function detectarTipo(valor: string): 'documento' | 'legajo' | 'email' | 'desconocido' {
@@ -52,6 +54,8 @@ export interface ResultadoBusqueda {
 }
 
 export async function actualizarContacto(id: string, email?: string | null, telefono?: string | null) {
+  await requireAdmin()
+  actualizarContactoSchema.parse({ id, email, telefono })
   const data: Record<string, string | null> = {}
   if (email !== undefined) data.email = email
   if (telefono !== undefined) data.telefono = telefono
@@ -62,6 +66,8 @@ export async function actualizarContacto(id: string, email?: string | null, tele
 }
 
 export async function buscarPorValores(valoresRaw: string): Promise<ResultadoBusqueda[]> {
+  await requireAdmin()
+  buscarValoresSchema.parse(valoresRaw)
   const valores = valoresRaw
     .split(/[\n,;\t]+/)
     .map((v) => v.trim())
@@ -148,6 +154,8 @@ export interface FiltrosAvanzados {
 }
 
 export async function buscarPorFiltros(filtros: FiltrosAvanzados): Promise<ResultadoBusqueda[]> {
+  await requireAdmin()
+  filtrosSchema.parse(filtros)
   const where: Prisma.AlumnoWhereInput = {}
 
   if (filtros.plan) where.plan = { contains: filtros.plan, mode: 'insensitive' }
@@ -190,6 +198,7 @@ export async function buscarPorFiltros(filtros: FiltrosAvanzados): Promise<Resul
 }
 
 export async function exportarResultados(resultados: ResultadoBusqueda[]) {
+  await requireAdmin()
   const XLSX = await import('xlsx')
 
   const data = resultados.map((r) => ({

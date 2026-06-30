@@ -103,6 +103,7 @@ model Alumno {
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
 
+  @@unique([tipoDocumento, numeroDocumento])
   @@index([numeroDocumento])
   @@index([legajo])
   @@index([email])

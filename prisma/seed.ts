@@ -151,17 +151,16 @@ async function main() {
   console.log('Insertando datos de ejemplo...')
 
   for (const a of alumnos) {
-    const existing = await prisma.alumno.findFirst({
-      where: { numeroDocumento: a.numeroDocumento },
+    await prisma.alumno.upsert({
+      where: {
+        tipoDocumento_numeroDocumento: {
+          tipoDocumento: a.tipoDocumento,
+          numeroDocumento: a.numeroDocumento,
+        },
+      },
+      create: a,
+      update: a,
     })
-    if (existing) {
-      await prisma.alumno.update({
-        where: { id: existing.id },
-        data: a,
-      })
-    } else {
-      await prisma.alumno.create({ data: a })
-    }
   }
 
   console.log(`${alumnos.length} alumnos insertados.`)
