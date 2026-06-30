@@ -17,7 +17,7 @@ Sistema de búsqueda y consulta de alumnos. Permite buscar por N° de Documento,
 - **Resultados:** tabla con Apellido y Nombre, Email y Teléfono. Los valores no encontrados se marcan como "No encontrado".
 - **Exportar a Excel:** descarga los resultados en formato .xlsx.
 - **Importar desde Excel:** carga una base existente mapeando columnas con nombres alternativos (soporta múltiples formatos). Disponible en **Configuración**.
-- **Control de acceso:** login con email y contraseña, solo usuarios autorizados pueden acceder.
+- **Control de acceso:** login con email y contraseña; redirección automática al login si no hay sesión.
 - **Dashboard:** resumen de alumnos, acceso rápido a planes y años de ingreso.
 - **Historial de consultas:** registro de quién buscó qué y cuándo.
 - **Edición inline:** completar email o teléfono faltante directamente desde los resultados.
@@ -86,7 +86,7 @@ NEXTAUTH_SECRET=genera-con-openssl-rand-base64-32
 AUTH_TRUST_HOST=true
 ```
 
-> **Nota:** `AUTH_TRUST_HOST=true` es necesario en Dokploy por sus URLs dinámicas (ej. `*.sslip.io`). Si ya se configuró `trustHost: true` en el código, se puede omitir.
+> `AUTH_TRUST_HOST` es opcional porque el código ya incluye `trustHost: true`.
 
 Cada push a `principal` dispara un redeploy automático desde Dokploy.
 
