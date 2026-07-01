@@ -137,7 +137,13 @@ export async function importarDesdeExcel(
 }> {
   await requireAdmin()
   importarExcelSchema.parse(base64)
-  const rows = await leerWorkbook(base64)
+
+  let rows: Record<string, unknown>[]
+  try {
+    rows = await leerWorkbook(base64)
+  } catch (e) {
+    throw new Error(`Error al leer el archivo: ${e instanceof Error ? e.message : 'desconocido'}`)
+  }
   validarImportacionRows(rows.length)
 
   const resultados: ResultadoImportacion[] = []
@@ -221,7 +227,11 @@ export async function importarDesdeExcel(
       const data: Record<string, unknown> = {}
       for (const [campo, fn] of fields) {
         if (incluir(campo)) {
-          data[campo] = fn()
+          try {
+            data[campo] = fn()
+          } catch {
+            data[campo] = null
+          }
         }
       }
 
