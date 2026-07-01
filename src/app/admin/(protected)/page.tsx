@@ -1,5 +1,11 @@
+import type { Metadata } from 'next'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
+
+export const metadata: Metadata = {
+  title: 'Dashboard | Alimentar Dato',
+  description: 'Panel principal con estadísticas de alumnos, consultas y distribución.',
+}
 
 async function getDashboardData() {
   const [totalAlumnos, conEmail, conTelefono, conLegajo, conPais, porPlan, porAno, porEstado, totalConsultas, consultasHoy, consultasTrend, paises] = await Promise.all([

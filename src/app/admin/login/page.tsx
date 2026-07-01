@@ -1,5 +1,6 @@
 import { auth, signIn } from '@/lib/auth'
 import Image from 'next/image'
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
 function OAuthButton({ provider, label, icon }: { provider: string; label: string; icon: string }) {
@@ -99,6 +100,11 @@ export default async function LoginPage() {
             >
               Iniciar sesión
             </button>
+            <p className="text-center text-xs text-gray-400">
+              <Link href="/admin/forgot-password" className="text-brand hover:underline">
+                ¿Olvidaste tu contraseña?
+              </Link>
+            </p>
           </form>
         </div>
       </div>

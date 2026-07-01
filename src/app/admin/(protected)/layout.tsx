@@ -2,6 +2,8 @@ import { auth, signOut } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
+import NotificationBell from '@/components/notification-bell'
+import { BackToTop } from '@/components/back-to-top'
 
 const NAV_ITEMS = [
   { href: '/admin',          label: 'Dashboard',  icon: <GridIcon /> },
@@ -34,6 +36,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
             </span>
           </div>
           <div className="flex items-center gap-3">
+            <NotificationBell />
             {session.user?.image ? (
               <Image
                 src={session.user.image}
@@ -91,6 +94,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
       </nav>
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">{children}</main>
+      <BackToTop />
 
       <footer className="border-t border-border bg-surface py-4">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 sm:px-6">

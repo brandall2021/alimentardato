@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Open_Sans, Poppins } from 'next/font/google'
 import './globals.css'
+import { SessionProvider } from '@/components/session-provider'
 
 const openSans = Open_Sans({
   variable: '--font-sans',
@@ -15,7 +16,7 @@ const poppins = Poppins({
 
 export const metadata: Metadata = {
   title: 'Alimentar Dato | Sistema de Alumnos',
-  description: 'Sistema de búsqueda y consulta de alumnos',
+  description: 'Sistema de búsqueda y consulta de alumnos — FACET · UNT',
 }
 
 export default function RootLayout({
@@ -28,7 +29,9 @@ export default function RootLayout({
       lang="es"
       className={`${openSans.variable} ${poppins.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col">{children}</body>
+      <body className="flex min-h-full flex-col">
+        <SessionProvider>{children}</SessionProvider>
+      </body>
     </html>
   )
 }

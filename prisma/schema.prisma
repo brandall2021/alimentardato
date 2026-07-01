@@ -48,8 +48,11 @@ model User {
   image         String?
   role          String    @default("ADMIN")
   createdAt     DateTime  @default(now())
+  resetToken    String?   @unique
+  resetTokenExpiry DateTime?
   accounts      Account[]
   sessions      Session[]
+  notificaciones Notification[]
 }
 
 model VerificationToken {
@@ -110,4 +113,17 @@ model Alumno {
   @@index([plan])
   @@index([anoIngreso])
   @@index([estadoInscripcion])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  type      String
+  title     String
+  message   String?
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
