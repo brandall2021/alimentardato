@@ -139,70 +139,70 @@ export default function AlumnosPage() {
         </div>
       </header>
 
-      <section className="rounded-md border border-gray-200 bg-white shadow-sm">
-        <div className="border-b border-gray-200 px-5 py-4">
+      <section className="card">
+        <div className="card-header">
           <h2 className="text-base font-bold">Búsqueda por valores</h2>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted">
             Pegá uno o varios N° de Documento, Legajos o Emails (separados por salto de línea, coma o espacio).
           </p>
         </div>
-        <div className="space-y-3 px-5 py-4">
+        <div className="card-body">
           <textarea
             value={valores}
             onChange={(e) => setValores(e.target.value)}
             placeholder="35000123&#10;40000123&#10;juan@example.com&#10;12345&#10;LE123456"
             rows={5}
-            className="w-full rounded-md border border-gray-300 p-3 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+            className="w-full rounded-lg border border-border p-3 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
           />
         </div>
       </section>
 
-      <section className="rounded-md border border-gray-200 bg-white shadow-sm">
-        <div className="border-b border-gray-200 px-5 py-4">
+      <section className="card">
+        <div className="card-header">
           <h2 className="text-base font-bold">Filtros adicionales</h2>
         </div>
-        <div className="grid grid-cols-1 gap-4 px-5 py-4 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 px-6 py-5 sm:grid-cols-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Plan</label>
+            <label className="stat-label mb-1 block">Plan</label>
             <input
               value={filtros.plan ?? ''}
               onChange={(e) => setFiltros((f) => ({ ...f, plan: e.target.value || undefined }))}
               placeholder="Ej: Contador Público"
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+              className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Año Ingreso</label>
+            <label className="stat-label mb-1 block">Año Ingreso</label>
             <input
               value={filtros.anoIngreso ?? ''}
               onChange={(e) => setFiltros((f) => ({ ...f, anoIngreso: e.target.value ? Number(e.target.value) : undefined }))}
               placeholder="Ej: 2024"
               type="number"
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+              className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Estado inscripción</label>
+            <label className="stat-label mb-1 block">Estado inscripción</label>
             <input
               value={filtros.estadoInscripcion ?? ''}
               onChange={(e) => setFiltros((f) => ({ ...f, estadoInscripcion: e.target.value || undefined }))}
               placeholder="Ej: Regular"
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+              className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
             />
           </div>
         </div>
-        <div className="flex items-center gap-3 border-t border-gray-200 px-5 py-4">
+        <div className="flex items-center gap-3 border-t border-border px-6 py-4">
           <button
             onClick={handleBuscar}
             disabled={buscando}
-            className="rounded-md bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+            className="rounded-lg bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark disabled:opacity-50 active:scale-[0.98]"
           >
             {buscando ? 'Buscando...' : 'Buscar'}
           </button>
           {resultados && resultados.length > 0 && (
             <button
               onClick={handleExport}
-              className="rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+              className="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-muted transition hover:bg-gray-50 active:scale-[0.98]"
             >
               Exportar Excel
             </button>
@@ -211,12 +211,12 @@ export default function AlumnosPage() {
       </section>
 
       {resultados && (
-        <section className="rounded-md border border-gray-200 bg-white shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 px-5 py-4">
+        <section className="card">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-6 py-4">
             <h2 className="text-base font-bold">
               Resultados ({resultados.length})
             </h2>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-muted">
               {encontrados} encontrado{encontrados !== 1 ? 's' : ''}
               {noEncontrados > 0 && (
                 <span className="ml-1 text-amber-600">
@@ -227,33 +227,33 @@ export default function AlumnosPage() {
           </div>
 
           {resultados.length === 0 ? (
-            <p className="px-5 py-8 text-sm text-gray-500">Sin resultados.</p>
+            <p className="card-body text-sm text-muted">Sin resultados.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-100 bg-gray-50 text-left">
-                    <th className="px-5 py-3 font-semibold text-gray-600">Valor buscado</th>
-                    <th className="px-5 py-3 font-semibold text-gray-600">Apellido y Nombre</th>
-                    <th className="px-5 py-3 font-semibold text-gray-600">Email</th>
-                    <th className="px-5 py-3 font-semibold text-gray-600">Teléfono</th>
-                    <th className="px-5 py-3 font-semibold text-gray-600">Estado</th>
+                  <tr className="border-b border-border bg-gray-50/50 text-left">
+                    <th className="px-6 py-3 font-semibold text-muted">Valor buscado</th>
+                    <th className="px-6 py-3 font-semibold text-muted">Apellido y Nombre</th>
+                    <th className="px-6 py-3 font-semibold text-muted">Email</th>
+                    <th className="px-6 py-3 font-semibold text-muted">Teléfono</th>
+                    <th className="px-6 py-3 font-semibold text-muted">Estado</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-border">
                   {resultados.map((r, i) => (
-                    <tr key={i} className="hover:bg-gray-50">
-                      <td className="px-5 py-3 font-mono text-xs text-gray-500">{r.valor}</td>
-                      <td className="px-5 py-3 font-medium">
+                    <tr key={i} className="hover:bg-gray-50/50 transition-colors">
+                      <td className="px-6 py-3 font-mono text-xs text-muted">{r.valor}</td>
+                      <td className="px-6 py-3 font-medium">
                         {r.encontrado ? r.apellidoNombre : '—'}
                       </td>
-                      <td className="px-5 py-3 text-gray-600">
+                      <td className="px-6 py-3 text-muted">
                         {renderContacto(r, 'email')}
                       </td>
-                      <td className="px-5 py-3 text-gray-600">
+                      <td className="px-6 py-3 text-muted">
                         {renderContacto(r, 'telefono')}
                       </td>
-                      <td className="px-5 py-3">
+                      <td className="px-6 py-3">
                         {r.encontrado ? (
                           <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
                             Encontrado

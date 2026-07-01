@@ -1,5 +1,7 @@
 import NextAuth from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
+import GoogleProvider from 'next-auth/providers/google'
+import GitHubProvider from 'next-auth/providers/github'
 import bcrypt from 'bcryptjs'
 import { prisma } from './prisma'
 
@@ -14,6 +16,8 @@ async function getDevCredentials() {
   } catch {}
   return null
 }
+
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@example.com'
 
 const authSecret = process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET
 
@@ -45,8 +49,30 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return { id: 'dev', email: creds.email, name: 'Desarrollo', role: 'ADMIN' }
       },
     }),
+    GoogleProvider({
+      clientId: process.env.AUTH_GOOGLE_ID!,
+      clientSecret: process.env.AUTH_GOOGLE_SECRET!,
+    }),
+    GitHubProvider({
+      clientId: process.env.AUTH_GITHUB_ID!,
+      clientSecret: process.env.AUTH_GITHUB_SECRET!,
+    }),
   ],
   callbacks: {
+    async signIn({ user, account }) {
+      if (account?.provider === 'google' || account?.provider === 'github') {
+        if (!user.email) return false
+        const email = user.email.toLowerCase()
+        if (email !== ADMIN_EMAIL) {
+          const alumno = await prisma.alumno.findFirst({
+            where: { email: { equals: email, mode: 'insensitive' } },
+          })
+          if (!alumno) return false
+        }
+        user.role = 'ADMIN'
+      }
+      return true
+    },
     async jwt({ token, user }) {
       if (user) {
         token.role = user.role ?? 'ADMIN'

@@ -3,6 +3,12 @@ import { redirect } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 
+const NAV_ITEMS = [
+  { href: '/admin/alumnos', label: 'Alumnos' },
+  { href: '/admin/consultas', label: 'Historial' },
+  { href: '/admin/configuracion', label: 'Configuración' },
+]
+
 export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
 
@@ -11,22 +17,31 @@ export default async function ProtectedLayout({ children }: { children: React.Re
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-gray-900">
-      <div className="bg-brand">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-1.5 sm:px-6">
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
+      <header className="bg-brand shadow-lg shadow-brand/20">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-2 sm:px-6">
           <div className="flex items-center gap-4">
             <Image
               src="/logo-face-white.png"
               alt="FACET"
               width={180}
               height={30}
-              className="h-7 w-auto brightness-0 invert"
+              className="h-8 w-auto brightness-0 invert"
             />
             <span className="hidden text-sm font-semibold text-white/80 sm:inline">
               Facultad de Ciencias Económicas
             </span>
           </div>
           <div className="flex items-center gap-3">
+            {session.user?.image && (
+              <Image
+                src={session.user.image}
+                alt=""
+                width={28}
+                height={28}
+                className="rounded-full ring-2 ring-white/30"
+              />
+            )}
             <span className="text-xs text-white/60">{session.user?.email}</span>
             <form
               action={async () => {
@@ -36,53 +51,44 @@ export default async function ProtectedLayout({ children }: { children: React.Re
             >
               <button
                 type="submit"
-                className="rounded bg-white/10 px-3 py-1 text-xs font-semibold text-white transition hover:bg-white/20"
+                className="rounded-lg bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/20 active:scale-[0.97]"
               >
                 Salir
               </button>
             </form>
           </div>
         </div>
-      </div>
+      </header>
 
-      <nav className="border-b border-gray-200 bg-white shadow-sm">
-        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-8">
-            <Link href="/admin" className="text-lg font-heading font-bold tracking-tight text-gray-800">
+      <nav className="sticky top-0 z-10 border-b border-border bg-white/80 shadow-sm backdrop-blur-md">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
+          <div className="flex items-center gap-8">
+            <Link href="/admin" className="text-lg font-heading font-bold tracking-tight text-foreground">
               Alimentar Dato
             </Link>
-            <div className="flex flex-wrap items-center gap-4">
-              <Link
-                href="/admin/alumnos"
-                className="text-sm font-semibold text-gray-500 transition hover:text-brand"
-              >
-                Alumnos
-              </Link>
-              <Link
-                href="/admin/consultas"
-                className="text-sm font-semibold text-gray-500 transition hover:text-brand"
-              >
-                Historial
-              </Link>
-              <Link
-                href="/admin/configuracion"
-                className="text-sm font-semibold text-gray-500 transition hover:text-brand"
-              >
-                Configuración
-              </Link>
+            <div className="flex items-center gap-1">
+              {NAV_ITEMS.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="rounded-lg px-3 py-1.5 text-sm font-semibold text-muted transition hover:bg-brand-light hover:text-brand"
+                >
+                  {item.label}
+                </Link>
+              ))}
             </div>
           </div>
-          <span className="hidden text-xs text-gray-400 lg:inline">
+          <span className="hidden text-xs text-muted lg:inline">
             Universidad Nacional de Tucumán
           </span>
         </div>
       </nav>
 
-      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">{children}</main>
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">{children}</main>
 
-      <footer className="mt-auto border-t border-gray-200 bg-white py-4">
+      <footer className="border-t border-border bg-surface py-4">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 sm:px-6">
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-muted">
             &copy; {new Date().getFullYear()} FACET · UNT
           </p>
         </div>

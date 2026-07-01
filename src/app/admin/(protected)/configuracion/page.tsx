@@ -148,10 +148,10 @@ export default function ConfiguracionPage() {
         <h1 className="mt-1 text-2xl font-bold">Configuración</h1>
       </header>
 
-      <section className="rounded-md border border-gray-200 bg-white shadow-sm">
-        <div className="border-b border-gray-200 px-5 py-4">
+      <section className="card">
+        <div className="card-header">
           <h2 className="text-base font-bold">Acceso por credenciales</h2>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted">
             Configurá el email y contraseña para iniciar sesión en la aplicación.
             Si están vacíos, se usarán las variables DEV_EMAIL y DEV_PASSWORD del entorno.
           </p>
@@ -165,10 +165,10 @@ export default function ConfiguracionPage() {
               await guardarConfig('dev_password_set', 'true')
             }
           }}
-          className="space-y-4 px-5 py-4"
+          className="card-body space-y-4"
         >
           <div>
-            <label htmlFor="email" className="mb-1 block text-sm font-medium text-gray-700">
+            <label htmlFor="email" className="stat-label mb-1 block">
               Email
             </label>
             <input
@@ -176,11 +176,11 @@ export default function ConfiguracionPage() {
               name="email"
               type="email"
               defaultValue={devEmail}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+              className="w-full rounded-lg border border-border px-3 py-2 text-sm transition focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
             />
           </div>
           <div>
-            <label htmlFor="password" className="mb-1 block text-sm font-medium text-gray-700">
+            <label htmlFor="password" className="stat-label mb-1 block">
               {hasPassword ? 'Nueva contraseña (dejar vacío para mantener)' : 'Contraseña'}
             </label>
             <input
@@ -188,28 +188,31 @@ export default function ConfiguracionPage() {
               name="password"
               type="password"
               placeholder={hasPassword ? '········' : ''}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+              className="w-full rounded-lg border border-border px-3 py-2 text-sm transition focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
             />
           </div>
           <button
             type="submit"
-            className="rounded-md bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark"
+            className="rounded-lg bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark active:scale-[0.98]"
           >
             Guardar
           </button>
         </form>
       </section>
 
-      <section className="rounded-md border border-gray-200 bg-white shadow-sm">
-        <div className="border-b border-gray-200 px-5 py-4">
-          <h2 className="text-base font-bold">Importar alumnos desde Excel</h2>
-          <p className="text-sm text-gray-500">
+      <section className="card">
+        <div className="card-header">
+          <h2 className="text-base font-bold">Importar alumnos desde Excel / CSV</h2>
+          <p className="text-sm text-muted">
             Seleccioná un archivo .xlsx, .xls o .csv y asigná cada columna a un campo del sistema.
           </p>
         </div>
         <div className="space-y-4 px-5 py-4">
           {paso === 'seleccionar' && (
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">
+            <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-dark active:scale-[0.98]">
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+              </svg>
               Seleccionar archivo
               <input
                 ref={fileRef}
@@ -223,12 +226,12 @@ export default function ConfiguracionPage() {
 
           {paso === 'mapear' && (
             <div className="space-y-4">
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-muted">
                 Asigná cada columna del archivo a un campo del sistema. Dejá <strong>— Ignorar —</strong> para omitir la columna.
               </p>
 
               {requiredFaltantes.length > 0 && (
-                <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
                   Faltan campos requeridos: {requiredFaltantes.map((c) => c.label).join(', ')}
                 </div>
               )}
@@ -236,20 +239,20 @@ export default function ConfiguracionPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-gray-200 text-left text-xs font-semibold uppercase text-gray-500">
+                    <tr className="border-b border-border text-left text-xs font-semibold uppercase text-muted">
                       <th className="pb-2 pr-4">Columna del archivo</th>
                       <th className="pb-2">Campo del sistema</th>
                     </tr>
                   </thead>
                   <tbody>
                     {columnas.map((col) => (
-                      <tr key={col} className="border-b border-gray-100">
-                        <td className="py-2 pr-4 font-medium text-gray-700">{col}</td>
+                      <tr key={col} className="border-b border-border">
+                        <td className="py-2 pr-4 font-medium text-foreground">{col}</td>
                         <td className="py-2">
                           <select
                             value={mapeo[col] ?? ''}
                             onChange={(e) => handleCambiarMapeo(col, e.target.value)}
-                            className="w-full max-w-xs rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                            className="w-full max-w-xs rounded-lg border border-border px-2 py-1.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
                           >
                             <option value="">— Ignorar —</option>
                             {CAMPOS_ALUMNO.map((c) => (
@@ -273,13 +276,13 @@ export default function ConfiguracionPage() {
                 <button
                   onClick={handleImportar}
                   disabled={requiredFaltantes.length > 0}
-                  className="rounded-md bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark disabled:opacity-50"
+                  className="rounded-lg bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark disabled:opacity-50 active:scale-[0.98]"
                 >
                   Importar
                 </button>
                 <button
                   onClick={handleReiniciar}
-                  className="rounded-md border border-gray-300 px-5 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+                  className="rounded-lg border border-border px-5 py-2 text-sm font-semibold text-muted transition hover:bg-gray-50 active:scale-[0.98]"
                 >
                   Cancelar
                 </button>
@@ -288,7 +291,7 @@ export default function ConfiguracionPage() {
           )}
 
           {paso === 'importando' && (
-            <div className="flex items-center gap-3 text-sm text-gray-600">
+            <div className="flex items-center gap-3 text-sm text-muted">
               <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-brand border-t-transparent" />
               Importando...
             </div>
@@ -296,7 +299,7 @@ export default function ConfiguracionPage() {
 
           {paso === 'resultado' && (
             <div className="space-y-3">
-              <div className={`rounded-md border px-4 py-3 text-sm ${
+              <div className={`rounded-lg border px-4 py-3 text-sm ${
                 mensajeImport.includes('Error')
                   ? 'border-red-200 bg-red-50 text-red-800'
                   : 'border-emerald-200 bg-emerald-50 text-emerald-800'
@@ -305,7 +308,7 @@ export default function ConfiguracionPage() {
               </div>
               <button
                 onClick={handleReiniciar}
-                className="rounded-md bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark"
+                className="rounded-lg bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark active:scale-[0.98]"
               >
                 Importar otro archivo
               </button>

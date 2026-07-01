@@ -1,11 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #232323;
+  --background: #f8f9fb;
+  --foreground: #1a1a2e;
   --brand: #d60000;
   --brand-dark: #b30000;
+  --brand-light: #ffe5e5;
   --accent: #e02b20;
+  --muted: #6b7280;
+  --surface: #ffffff;
+  --border: #e5e7eb;
 }
 
 @theme inline {
@@ -13,7 +17,11 @@
   --color-foreground: var(--foreground);
   --color-brand: var(--brand);
   --color-brand-dark: var(--brand-dark);
+  --color-brand-light: var(--brand-light);
   --color-accent: var(--accent);
+  --color-muted: var(--muted);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
   --font-sans: 'Open Sans', sans-serif;
   --font-heading: 'Poppins', sans-serif;
   --font-mono: 'ui-monospace', 'SFMono-Regular', monospace;
@@ -28,4 +36,24 @@ body {
 h1, h2, h3, h4, h5, h6 {
   font-family: 'Poppins', sans-serif;
   font-weight: 700;
+}
+
+@utility card {
+  @apply rounded-xl border border-border bg-surface shadow-sm;
+}
+
+@utility card-header {
+  @apply border-b border-border px-6 py-4;
+}
+
+@utility card-body {
+  @apply px-6 py-5;
+}
+
+@utility stat-value {
+  @apply text-3xl font-heading font-bold tracking-tight;
+}
+
+@utility stat-label {
+  @apply text-sm font-medium text-muted;
 }

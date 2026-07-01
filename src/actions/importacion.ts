@@ -114,7 +114,10 @@ export interface ResultadoImportacion {
 async function leerWorkbook(base64: string) {
   const XLSX = await import('xlsx')
   const buf = Buffer.from(base64, 'base64')
-  const wb = XLSX.read(buf, { type: 'buffer' })
+  let wb = XLSX.read(buf, { type: 'buffer' })
+  if (!wb.SheetNames.length) {
+    wb = XLSX.read(buf.toString('utf-8'), { type: 'string', raw: true })
+  }
   const ws = wb.Sheets[wb.SheetNames[0]]
   return XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: null })
 }
