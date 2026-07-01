@@ -20,7 +20,14 @@ export default async function ConsultasPage({
       </header>
 
       {consultas.length === 0 ? (
-        <p className="text-sm text-muted">Todavía no hay consultas registradas.</p>
+        <div className="card">
+          <div className="flex flex-col items-center px-6 py-12">
+            <svg className="mb-3 h-12 w-12 text-muted-light" fill="none" viewBox="0 0 24 24" strokeWidth="1" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p className="text-sm text-muted">Todavía no hay consultas registradas.</p>
+          </div>
+        </div>
       ) : (
         <div className="card overflow-hidden">
           <div className="overflow-x-auto">
@@ -49,13 +56,7 @@ export default async function ConsultasPage({
                     </td>
                     <td className="px-6 py-3">{c.usuario}</td>
                     <td className="px-6 py-3">
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                          c.tipo === 'valores'
-                            ? 'bg-brand-light text-brand'
-                            : 'bg-purple-100 text-purple-700'
-                        }`}
-                      >
+                      <span className={c.tipo === 'valores' ? 'badge-blue' : 'badge-purple'}>
                         {c.tipo === 'valores' ? 'Por valores' : 'Por filtros'}
                       </span>
                     </td>
@@ -63,7 +64,7 @@ export default async function ConsultasPage({
                       {c.valores || '—'}
                     </td>
                     <td className="px-6 py-3">
-                      <span className="font-medium text-foreground">{c.resultados}</span>
+                      <span className="font-semibold text-foreground">{c.resultados}</span>
                     </td>
                     <td className="max-w-xs truncate px-6 py-3 text-xs text-muted">
                       {c.filtros || '—'}

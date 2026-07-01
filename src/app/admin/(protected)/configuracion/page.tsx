@@ -168,7 +168,7 @@ export default function ConfiguracionPage() {
           className="card-body space-y-4"
         >
           <div>
-            <label htmlFor="email" className="stat-label mb-1 block">
+            <label htmlFor="email" className="input-label">
               Email
             </label>
             <input
@@ -176,11 +176,11 @@ export default function ConfiguracionPage() {
               name="email"
               type="email"
               defaultValue={devEmail}
-              className="w-full rounded-lg border border-border px-3 py-2 text-sm transition focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+              className="input"
             />
           </div>
           <div>
-            <label htmlFor="password" className="stat-label mb-1 block">
+            <label htmlFor="password" className="input-label">
               {hasPassword ? 'Nueva contraseña (dejar vacío para mantener)' : 'Contraseña'}
             </label>
             <input
@@ -188,12 +188,12 @@ export default function ConfiguracionPage() {
               name="password"
               type="password"
               placeholder={hasPassword ? '········' : ''}
-              className="w-full rounded-lg border border-border px-3 py-2 text-sm transition focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+              className="input"
             />
           </div>
           <button
             type="submit"
-            className="rounded-lg bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark active:scale-[0.98]"
+            className="btn-primary"
           >
             Guardar
           </button>
@@ -209,7 +209,7 @@ export default function ConfiguracionPage() {
         </div>
         <div className="space-y-4 px-5 py-4">
           {paso === 'seleccionar' && (
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-dark active:scale-[0.98]">
+            <label className="btn-primary cursor-pointer">
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
               </svg>
@@ -232,7 +232,8 @@ export default function ConfiguracionPage() {
 
               {requiredFaltantes.length > 0 && (
                 <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                  Faltan campos requeridos: {requiredFaltantes.map((c) => c.label).join(', ')}
+                  <span className="font-semibold">Campos requeridos faltantes:</span>{' '}
+                  {requiredFaltantes.map((c) => c.label).join(', ')}
                 </div>
               )}
 
@@ -252,7 +253,7 @@ export default function ConfiguracionPage() {
                           <select
                             value={mapeo[col] ?? ''}
                             onChange={(e) => handleCambiarMapeo(col, e.target.value)}
-                            className="w-full max-w-xs rounded-lg border border-border px-2 py-1.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                            className="input max-w-xs"
                           >
                             <option value="">— Ignorar —</option>
                             {CAMPOS_ALUMNO.map((c) => (
@@ -276,13 +277,13 @@ export default function ConfiguracionPage() {
                 <button
                   onClick={handleImportar}
                   disabled={requiredFaltantes.length > 0}
-                  className="rounded-lg bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark disabled:opacity-50 active:scale-[0.98]"
+                  className="btn-primary"
                 >
                   Importar
                 </button>
                 <button
                   onClick={handleReiniciar}
-                  className="rounded-lg border border-border px-5 py-2 text-sm font-semibold text-muted transition hover:bg-gray-50 active:scale-[0.98]"
+                  className="btn-secondary"
                 >
                   Cancelar
                 </button>
@@ -308,7 +309,7 @@ export default function ConfiguracionPage() {
               </div>
               <button
                 onClick={handleReiniciar}
-                className="rounded-lg bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark active:scale-[0.98]"
+                className="btn-primary"
               >
                 Importar otro archivo
               </button>
