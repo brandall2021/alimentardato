@@ -194,7 +194,8 @@ export async function importarDesdeExcel(
 
       const mapeados = new Set(Object.values(mapeo ?? {}).filter(Boolean) as CampoAlumno[])
 
-      const incluir = (campo: CampoAlumno): boolean => !mapeo || mapeados.has(campo)
+      const REQ = new Set<CampoAlumno>(['apellidoNombre', 'tipoDocumento', 'numeroDocumento'])
+      const incluir = (campo: CampoAlumno): boolean => REQ.has(campo) || !mapeo || mapeados.has(campo)
 
       const fields: [CampoAlumno, () => unknown][] = [
         ['apellidoNombre', () => apellidoNombre],
