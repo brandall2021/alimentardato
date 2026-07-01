@@ -2,15 +2,22 @@
 
 import { useState, useRef, useCallback } from 'react'
 import { obtenerConfig, guardarConfig } from '@/actions/configuracion'
-import { importarDesdeExcel } from '@/actions/importacion'
+import { leerEncabezadosExcel, importarDesdeExcel } from '@/actions/importacion'
+import { CAMPOS_ALUMNO, type MapeoColumnas, type CampoAlumno } from '@/lib/campos-alumno'
 
 export default function ConfiguracionPage() {
   const [devEmail, setDevEmail] = useState('')
   const [hasPassword, setHasPassword] = useState(false)
   const [loaded, setLoaded] = useState(false)
-  const [importando, setImportando] = useState(false)
+
+  const [fileBase64, setFileBase64] = useState('')
+  const [columnas, setColumnas] = useState<string[]>([])
+  const [mapeo, setMapeo] = useState<MapeoColumnas>({})
+  const [paso, setPaso] = useState<'seleccionar' | 'mapear' | 'importando' | 'resultado'>('seleccionar')
   const [mensajeImport, setMensajeImport] = useState('')
+  const [filasCount, setFilasCount] = useState(0)
   const fileRef = useRef<HTMLInputElement>(null)
+  const fileRef2 = useRef<HTMLInputElement>(null)
 
   if (!loaded) {
     obtenerConfig().then((c) => {
@@ -20,28 +27,126 @@ export default function ConfiguracionPage() {
     })
   }
 
-  const handleImport = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSeleccionarArchivo = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
-    setImportando(true)
+    const buf = await file.arrayBuffer()
+    const b64 = Buffer.from(buf).toString('base64')
+    setFileBase64(b64)
+
+    const headers = await leerEncabezadosExcel(b64)
+    setColumnas(headers)
+
+    const auto: MapeoColumnas = {}
+    const usados = new Set<CampoAlumno>()
+    for (const col of headers) {
+      const key = col.toLowerCase().trim().replace(/\s+/g, ' ')
+      const aliasMap: Record<string, CampoAlumno> = {
+        'apellido y nombre': 'apellidoNombre',
+        'apellido_nombre': 'apellidoNombre',
+        'nombre_completo': 'apellidoNombre',
+        'tipo documento': 'tipoDocumento',
+        'tipo_documento': 'tipoDocumento',
+        'tipo_doc': 'tipoDocumento',
+        'n° documento': 'numeroDocumento',
+        'nro documento': 'numeroDocumento',
+        'numero_documento': 'numeroDocumento',
+        'nro_documento': 'numeroDocumento',
+        'documento': 'numeroDocumento',
+        'fecha de nacimiento': 'fechaNacimiento',
+        'fecha_nacimiento': 'fechaNacimiento',
+        'fecha_nac': 'fechaNacimiento',
+        'email': 'email',
+        'teléfono': 'telefono',
+        'telefono': 'telefono',
+        'celular': 'telefono',
+        'legajo': 'legajo',
+        'plan': 'plan',
+        'año ingreso': 'anoIngreso',
+        'ano ingreso': 'anoIngreso',
+        'ano_ingreso': 'anoIngreso',
+        'anio_ingreso': 'anoIngreso',
+        'fecha ingreso': 'fechaIngreso',
+        'fecha_ingreso': 'fechaIngreso',
+        'último examen': 'ultimoExamen',
+        'ultimo_examen': 'ultimoExamen',
+        'última reinscripción': 'ultimaReinscripcion',
+        'ultima_reinscripcion': 'ultimaReinscripcion',
+        'prom. con aplazos': 'promConAplazos',
+        'prom_con_aplazos': 'promConAplazos',
+        'prom. sin aplazos': 'promSinAplazos',
+        'prom_sin_aplazos': 'promSinAplazos',
+        'actividades aprobadas': 'actividadesAprobadas',
+        'actividades_aprobadas': 'actividadesAprobadas',
+        'total actividades': 'totalActividades',
+        'total_actividades': 'totalActividades',
+        'estado inscripción': 'estadoInscripcion',
+        'estado_inscripcion': 'estadoInscripcion',
+        'país de origen': 'paisOrigen',
+        'pais_origen': 'paisOrigen',
+      }
+      const campo = aliasMap[key]
+      if (campo && !usados.has(campo)) {
+        auto[col] = campo
+        usados.add(campo)
+      } else {
+        auto[col] = ''
+      }
+    }
+    setMapeo(auto)
+
+    const len = buf.byteLength
+    setFilasCount(0)
+    setPaso('mapear')
+    if (fileRef.current) fileRef.current.value = ''
+  }, [])
+
+  const handleCambiarMapeo = useCallback((columna: string, campo: string) => {
+    setMapeo((prev) => {
+      const nuevo = { ...prev }
+      const anterior = prev[columna]
+      if (anterior) {
+        const otro = Object.entries(nuevo).find(([, v]) => v === campo)
+        if (otro) nuevo[otro[0]] = ''
+      }
+      nuevo[columna] = campo as CampoAlumno | ''
+      return nuevo
+    })
+  }, [])
+
+  const handleImportar = useCallback(async () => {
+    setPaso('importando')
     setMensajeImport('')
     try {
-      const buf = await file.arrayBuffer()
-      const b64 = Buffer.from(buf).toString('base64')
-      const res = await importarDesdeExcel(b64)
+      const mapeoFiltrado: MapeoColumnas = {}
+      for (const [col, campo] of Object.entries(mapeo)) {
+        if (campo) mapeoFiltrado[col] = campo
+      }
+      const res = await importarDesdeExcel(fileBase64, mapeoFiltrado)
       setMensajeImport(`Importados: ${res.importados}, Errores: ${res.errores}`)
       if (res.errores > 0) {
         setMensajeImport((prev) => `${prev}. Revisá la consola para más detalles.`)
         console.table(res.detalles.filter((d) => !d.exito))
       }
+      setPaso('resultado')
     } catch (err) {
       setMensajeImport(`Error al importar: ${err instanceof Error ? err.message : 'desconocido'}`)
-    } finally {
-      setImportando(false)
-      if (fileRef.current) fileRef.current.value = ''
+      setPaso('resultado')
     }
+  }, [fileBase64, mapeo])
+
+  const handleReiniciar = useCallback(() => {
+    setFileBase64('')
+    setColumnas([])
+    setMapeo({})
+    setPaso('seleccionar')
+    setMensajeImport('')
+    setFilasCount(0)
   }, [])
+
+  const camposUsados = new Set(Object.values(mapeo).filter(Boolean))
+  const requiredFaltantes = CAMPOS_ALUMNO.filter((c) => c.required && !camposUsados.has(c.value))
 
   return (
     <div className="space-y-6">
@@ -106,31 +211,113 @@ export default function ConfiguracionPage() {
         <div className="border-b border-gray-200 px-5 py-4">
           <h2 className="text-base font-bold">Importar alumnos desde Excel</h2>
           <p className="text-sm text-gray-500">
-            Seleccioná un archivo .xlsx, .xls o .csv con los datos de alumnos.
-            Las columnas se mapean automáticamente por nombre.
+            Seleccioná un archivo .xlsx, .xls o .csv y asigná cada columna a un campo del sistema.
           </p>
         </div>
-        <div className="space-y-3 px-5 py-4">
-          {mensajeImport && (
-            <div className={`rounded-md border px-4 py-3 text-sm ${
-              mensajeImport.includes('Error')
-                ? 'border-red-200 bg-red-50 text-red-800'
-                : 'border-emerald-200 bg-emerald-50 text-emerald-800'
-            }`}>
-              {mensajeImport}
+        <div className="space-y-4 px-5 py-4">
+          {paso === 'seleccionar' && (
+            <label className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">
+              Seleccionar archivo
+              <input
+                ref={fileRef}
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                className="hidden"
+                onChange={handleSeleccionarArchivo}
+              />
+            </label>
+          )}
+
+          {paso === 'mapear' && (
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600">
+                Asigná cada columna del archivo a un campo del sistema. Dejá <strong>— Ignorar —</strong> para omitir la columna.
+              </p>
+
+              {requiredFaltantes.length > 0 && (
+                <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                  Faltan campos requeridos: {requiredFaltantes.map((c) => c.label).join(', ')}
+                </div>
+              )}
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-200 text-left text-xs font-semibold uppercase text-gray-500">
+                      <th className="pb-2 pr-4">Columna del archivo</th>
+                      <th className="pb-2">Campo del sistema</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {columnas.map((col) => (
+                      <tr key={col} className="border-b border-gray-100">
+                        <td className="py-2 pr-4 font-medium text-gray-700">{col}</td>
+                        <td className="py-2">
+                          <select
+                            value={mapeo[col] ?? ''}
+                            onChange={(e) => handleCambiarMapeo(col, e.target.value)}
+                            className="w-full max-w-xs rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                          >
+                            <option value="">— Ignorar —</option>
+                            {CAMPOS_ALUMNO.map((c) => (
+                              <option
+                                key={c.value}
+                                value={c.value}
+                                disabled={camposUsados.has(c.value) && mapeo[col] !== c.value}
+                              >
+                                {c.label}{c.required ? ' *' : ''}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={handleImportar}
+                  disabled={requiredFaltantes.length > 0}
+                  className="rounded-md bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark disabled:opacity-50"
+                >
+                  Importar
+                </button>
+                <button
+                  onClick={handleReiniciar}
+                  className="rounded-md border border-gray-300 px-5 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+                >
+                  Cancelar
+                </button>
+              </div>
             </div>
           )}
-          <label className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark disabled:opacity-50">
-            {importando ? 'Importando...' : 'Seleccionar archivo'}
-            <input
-              ref={fileRef}
-              type="file"
-              accept=".xlsx,.xls,.csv"
-              className="hidden"
-              onChange={handleImport}
-              disabled={importando}
-            />
-          </label>
+
+          {paso === 'importando' && (
+            <div className="flex items-center gap-3 text-sm text-gray-600">
+              <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-brand border-t-transparent" />
+              Importando...
+            </div>
+          )}
+
+          {paso === 'resultado' && (
+            <div className="space-y-3">
+              <div className={`rounded-md border px-4 py-3 text-sm ${
+                mensajeImport.includes('Error')
+                  ? 'border-red-200 bg-red-50 text-red-800'
+                  : 'border-emerald-200 bg-emerald-50 text-emerald-800'
+              }`}>
+                {mensajeImport}
+              </div>
+              <button
+                onClick={handleReiniciar}
+                className="rounded-md bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark"
+              >
+                Importar otro archivo
+              </button>
+            </div>
+          )}
         </div>
       </section>
     </div>
