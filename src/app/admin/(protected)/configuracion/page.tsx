@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { obtenerConfig, guardarConfig } from '@/actions/configuracion'
 import { leerEncabezadosExcel, importarDesdeExcel } from '@/actions/importacion'
 import { CAMPOS_ALUMNO, type MapeoColumnas, type CampoAlumno } from '@/lib/campos-alumno'
@@ -8,24 +8,20 @@ import { CAMPOS_ALUMNO, type MapeoColumnas, type CampoAlumno } from '@/lib/campo
 export default function ConfiguracionPage() {
   const [devEmail, setDevEmail] = useState('')
   const [hasPassword, setHasPassword] = useState(false)
-  const [loaded, setLoaded] = useState(false)
 
   const [fileBase64, setFileBase64] = useState('')
   const [columnas, setColumnas] = useState<string[]>([])
   const [mapeo, setMapeo] = useState<MapeoColumnas>({})
   const [paso, setPaso] = useState<'seleccionar' | 'mapear' | 'importando' | 'resultado'>('seleccionar')
   const [mensajeImport, setMensajeImport] = useState('')
-  const [filasCount, setFilasCount] = useState(0)
   const fileRef = useRef<HTMLInputElement>(null)
-  const fileRef2 = useRef<HTMLInputElement>(null)
 
-  if (!loaded) {
+  useEffect(() => {
     obtenerConfig().then((c) => {
       setDevEmail(c.dev_email ?? '')
       setHasPassword(c.dev_password_set === 'true')
-      setLoaded(true)
     })
-  }
+  }, [])
 
   const handleSeleccionarArchivo = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -96,8 +92,6 @@ export default function ConfiguracionPage() {
     }
     setMapeo(auto)
 
-    const len = buf.byteLength
-    setFilasCount(0)
     setPaso('mapear')
     if (fileRef.current) fileRef.current.value = ''
   }, [])
@@ -142,7 +136,6 @@ export default function ConfiguracionPage() {
     setMapeo({})
     setPaso('seleccionar')
     setMensajeImport('')
-    setFilasCount(0)
   }, [])
 
   const camposUsados = new Set(Object.values(mapeo).filter(Boolean))
