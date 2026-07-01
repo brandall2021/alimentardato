@@ -31,10 +31,10 @@ async function getDashboardData() {
       where: { createdAt: { gte: new Date(new Date().setHours(0, 0, 0, 0)) } },
     }),
     prisma.$queryRaw<{ dia: string; total: bigint }[]>`
-      SELECT DATE(created_at)::text AS dia, COUNT(*)::bigint AS total
+      SELECT DATE("createdAt")::text AS dia, COUNT(*)::bigint AS total
       FROM "Consulta"
-      WHERE created_at >= NOW() - INTERVAL '7 days'
-      GROUP BY DATE(created_at)
+      WHERE "createdAt" >= NOW() - INTERVAL '7 days'
+      GROUP BY DATE("createdAt")
       ORDER BY dia ASC
     `,
     prisma.alumno.groupBy({
