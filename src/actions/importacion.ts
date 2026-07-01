@@ -192,49 +192,36 @@ export async function importarDesdeExcel(
         continue
       }
 
-      const getVal = (campo: CampoAlumno, fallbackAlias?: string[]): unknown => {
-        if (mapeo) return resolver(campo)
-        return row[fallbackAlias?.[0] ?? ''] ?? undefined
-      }
+      const mapeados = new Set(Object.values(mapeo ?? {}).filter(Boolean) as CampoAlumno[])
 
-      const data: Record<string, unknown> = {
-        apellidoNombre,
-        tipoDocumento,
-        numeroDocumento,
-      }
+      const incluir = (campo: CampoAlumno): boolean => !mapeo || mapeados.has(campo)
 
-      if (mapeo) {
-        data.fechaNacimiento = parseDate(resolver('fechaNacimiento'))
-        data.email = limpiarString(resolver('email'))
-        data.telefono = limpiarString(resolver('telefono'))
-        data.legajo = limpiarString(resolver('legajo'))
-        data.plan = limpiarString(resolver('plan'))
-        data.anoIngreso = limpiarNumero(resolver('anoIngreso'))
-        data.fechaIngreso = parseDate(resolver('fechaIngreso'))
-        data.ultimoExamen = parseDate(resolver('ultimoExamen'))
-        data.ultimaReinscripcion = parseDate(resolver('ultimaReinscripcion'))
-        data.promConAplazos = limpiarNumero(resolver('promConAplazos'))
-        data.promSinAplazos = limpiarNumero(resolver('promSinAplazos'))
-        data.actividadesAprobadas = limpiarNumero(resolver('actividadesAprobadas'))
-        data.totalActividades = limpiarNumero(resolver('totalActividades'))
-        data.estadoInscripcion = limpiarString(resolver('estadoInscripcion'))
-        data.paisOrigen = limpiarString(resolver('paisOrigen'))
-      } else {
-        data.fechaNacimiento = parseDate(row['Fecha de Nacimiento'] ?? row['fecha_nacimiento'] ?? row['fecha_nac'])
-        data.email = limpiarString(row['Email'] ?? row['email'])
-        data.telefono = limpiarString(row['Teléfono'] ?? row['telefono'] ?? row['celular'])
-        data.legajo = limpiarString(row['Legajo'] ?? row['legajo'])
-        data.plan = limpiarString(row['Plan'] ?? row['plan'])
-        data.anoIngreso = limpiarNumero(row['Año Ingreso'] ?? row['ano_ingreso'] ?? row['anio_ingreso'])
-        data.fechaIngreso = parseDate(row['Fecha Ingreso'] ?? row['fecha_ingreso'])
-        data.ultimoExamen = parseDate(row['Último Examen'] ?? row['ultimo_examen'])
-        data.ultimaReinscripcion = parseDate(row['Última Reinscripción'] ?? row['ultima_reinscripcion'])
-        data.promConAplazos = limpiarNumero(row['Prom. con Aplazos'] ?? row['prom_con_aplazos'])
-        data.promSinAplazos = limpiarNumero(row['Prom. sin Aplazos'] ?? row['prom_sin_aplazos'])
-        data.actividadesAprobadas = limpiarNumero(row['Actividades Aprobadas'] ?? row['actividades_aprobadas'])
-        data.totalActividades = limpiarNumero(row['Total Actividades'] ?? row['total_actividades'])
-        data.estadoInscripcion = limpiarString(row['Estado inscripción'] ?? row['estado_inscripcion'])
-        data.paisOrigen = limpiarString(row['País de Origen'] ?? row['pais_origen'])
+      const fields: [CampoAlumno, () => unknown][] = [
+        ['apellidoNombre', () => apellidoNombre],
+        ['tipoDocumento', () => tipoDocumento],
+        ['numeroDocumento', () => numeroDocumento],
+        ['fechaNacimiento', () => parseDate(mapeo ? resolver('fechaNacimiento') : row['Fecha de Nacimiento'] ?? row['fecha_nacimiento'] ?? row['fecha_nac'])],
+        ['email', () => limpiarString(mapeo ? resolver('email') : row['Email'] ?? row['email'])],
+        ['telefono', () => limpiarString(mapeo ? resolver('telefono') : row['Teléfono'] ?? row['telefono'] ?? row['celular'])],
+        ['legajo', () => limpiarString(mapeo ? resolver('legajo') : row['Legajo'] ?? row['legajo'])],
+        ['plan', () => limpiarString(mapeo ? resolver('plan') : row['Plan'] ?? row['plan'])],
+        ['anoIngreso', () => limpiarNumero(mapeo ? resolver('anoIngreso') : row['Año Ingreso'] ?? row['ano_ingreso'] ?? row['anio_ingreso'])],
+        ['fechaIngreso', () => parseDate(mapeo ? resolver('fechaIngreso') : row['Fecha Ingreso'] ?? row['fecha_ingreso'])],
+        ['ultimoExamen', () => parseDate(mapeo ? resolver('ultimoExamen') : row['Último Examen'] ?? row['ultimo_examen'])],
+        ['ultimaReinscripcion', () => parseDate(mapeo ? resolver('ultimaReinscripcion') : row['Última Reinscripción'] ?? row['ultima_reinscripcion'])],
+        ['promConAplazos', () => limpiarNumero(mapeo ? resolver('promConAplazos') : row['Prom. con Aplazos'] ?? row['prom_con_aplazos'])],
+        ['promSinAplazos', () => limpiarNumero(mapeo ? resolver('promSinAplazos') : row['Prom. sin Aplazos'] ?? row['prom_sin_aplazos'])],
+        ['actividadesAprobadas', () => limpiarNumero(mapeo ? resolver('actividadesAprobadas') : row['Actividades Aprobadas'] ?? row['actividades_aprobadas'])],
+        ['totalActividades', () => limpiarNumero(mapeo ? resolver('totalActividades') : row['Total Actividades'] ?? row['total_actividades'])],
+        ['estadoInscripcion', () => limpiarString(mapeo ? resolver('estadoInscripcion') : row['Estado inscripción'] ?? row['estado_inscripcion'])],
+        ['paisOrigen', () => limpiarString(mapeo ? resolver('paisOrigen') : row['País de Origen'] ?? row['pais_origen'])],
+      ]
+
+      const data: Record<string, unknown> = {}
+      for (const [campo, fn] of fields) {
+        if (incluir(campo)) {
+          data[campo] = fn()
+        }
       }
 
       await prisma.alumno.upsert({
