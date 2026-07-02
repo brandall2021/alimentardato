@@ -88,7 +88,12 @@ export async function parsearArchivoTxt(base64: string): Promise<{
     const raw = lineasRaw[i].trim()
     if (!raw) continue
 
-    const partes = raw.split('|')
+    let partes = raw.split('|')
+
+    // trailing | → descartar último elemento vacío
+    if (partes.length === CAMPOS_ESPERADOS + 1 && partes[partes.length - 1] === '') {
+      partes = partes.slice(0, CAMPOS_ESPERADOS)
+    }
 
     if (partes.length !== CAMPOS_ESPERADOS) {
       lineas.push({
