@@ -228,7 +228,8 @@ export async function parsearArchivoTxt(base64: string): Promise<{
 
 export async function importarAraucano(
   base64: string,
-  importarSoloValidas: boolean = true
+  importarSoloValidas: boolean = true,
+  camposSeleccionados?: Set<string>
 ): Promise<{
   importados: number
   errores: number
@@ -254,6 +255,8 @@ export async function importarAraucano(
     },
   })
 
+  const CAMPOS_FIJOS = new Set(['apellido', 'nombres', 'numeroDocumento'])
+
   const detalles: { fila: number; exito: boolean; error?: string }[] = []
   let ok = 0
   let err = 0
@@ -266,12 +269,15 @@ export async function importarAraucano(
     }
 
     try {
-      await prisma.araucanoRegistro.create({
-        data: {
-          ...linea.datos,
-          importacionId: importacion.id,
-        },
-      })
+      const data: Record<string, unknown> = {
+        importacionId: importacion.id,
+      }
+      for (const [key, val] of Object.entries(linea.datos)) {
+        if (!camposSeleccionados || camposSeleccionados.has(key) || CAMPOS_FIJOS.has(key)) {
+          data[key] = val
+        }
+      }
+      await prisma.araucanoRegistro.create({ data: data as never })
       detalles.push({ fila: linea.fila, exito: true })
       ok++
     } catch (e) {
@@ -289,4 +295,16 @@ export async function importarAraucano(
   revalidatePath('/admin/araucano')
 
   return { importados: ok, errores: err, detalles, importacionId: importacion.id }
+}
+
+export async function vaciarAraucano(): Promise<{ eliminados: number }> {
+  await requireAdmin()
+
+  const eliminados = await prisma.araucanoRegistro.count()
+  await prisma.araucanoRegistro.deleteMany()
+  await prisma.araucanoImportacion.deleteMany()
+
+  revalidatePath('/admin/araucano')
+
+  return { eliminados }
 }
