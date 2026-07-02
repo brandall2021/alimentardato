@@ -25,14 +25,25 @@ export async function POST(req: Request) {
 
   const hashedPassword = await bcrypt.hash(password, 12)
 
-  await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      password: hashedPassword,
-      resetToken: null,
-      resetTokenExpiry: null,
-    },
-  })
+  await prisma.$transaction([
+    prisma.configuracion.upsert({
+      where: { clave: 'dev_password' },
+      create: { clave: 'dev_password', valor: hashedPassword },
+      update: { valor: hashedPassword },
+    }),
+    prisma.configuracion.upsert({
+      where: { clave: 'dev_password_set' },
+      create: { clave: 'dev_password_set', valor: 'true' },
+      update: { valor: 'true' },
+    }),
+    prisma.user.update({
+      where: { id: user.id },
+      data: {
+        resetToken: null,
+        resetTokenExpiry: null,
+      },
+    }),
+  ])
 
   return NextResponse.json({ message: 'Contraseña actualizada correctamente' })
 }
