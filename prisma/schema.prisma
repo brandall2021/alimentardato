@@ -115,6 +115,16 @@ model Alumno {
   @@index([estadoInscripcion])
 }
 
+model PuebloOriginario {
+  idpueblooriginario Int    @id
+  pueblooriginario   String
+}
+
+model Pais {
+  idpais Int    @id
+  pais   String
+}
+
 model Notification {
   id        String   @id @default(cuid())
   type      String
@@ -126,4 +136,56 @@ model Notification {
 
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AraucanoRegistro {
+  id                        String   @id @default(cuid())
+
+  apellido                  String
+  nombres                   String
+  codigoTipoDocumento       Int
+  numeroDocumento           String
+  cuil                      String
+  genero                    Int
+  fechaNacimiento           DateTime
+  cueEscuelaOrigen          String
+  codigoHorasTrabajo        String
+  nivelInstruccionPadre     Int
+  nivelInstruccionMadre     Int
+  paisNacimiento            Int
+  paisDomicilioProcedencia  Int
+  fechaIngresoPais          DateTime?
+  paisExpedidorTitulo       Int
+  localidadProcedencia      Int?
+  identidadGenero           Int
+  identidadGeneroTexto      String?
+  puebloOriginario          Int?
+  puebloOriginarioTexto     String?
+  condicionDiscapacidad     String  @default("N")
+  tieneCUD                  String  @default("N")
+  discapacidadAuditiva      String  @default("N")
+  discapacidadVisual        String  @default("N")
+  discapacidadMotora        String  @default("N")
+  discapacidadPsicosocial   String  @default("N")
+  otraSituacionDiscapacidad String  @default("N")
+  descripcionOtraDiscapacidad String?
+
+  importacionId             String?
+  importacion               AraucanoImportacion? @relation(fields: [importacionId], references: [id], onDelete: Cascade)
+
+  createdAt                 DateTime @default(now())
+
+  @@index([numeroDocumento])
+  @@index([cuil])
+}
+
+model AraucanoImportacion {
+  id        String   @id @default(cuid())
+  filename  String
+  filas     Int
+  importados Int    @default(0)
+  errores   Int     @default(0)
+  createdAt DateTime @default(now())
+
+  registros AraucanoRegistro[]
 }
