@@ -722,3 +722,102 @@ export async function obtenerResumenArchivo(archivo: ArchivoKey): Promise<{
     ultimaImportacion: u ? { fecha: u.createdAt, filas: u.filas, importados: u.importados, errores: u.errores } : null,
   }
 }
+
+// ─── Dashboard ───
+
+export interface OverlapPorTablas {
+  tablas: number
+  cantidad: number
+}
+
+export interface ParIntersec {
+  tablaA: string
+  tablaB: string
+  cantidad: number
+}
+
+export interface DashboardArchivos {
+  totales: { archivo: ArchivoKey; registros: number }[]
+  overlap: OverlapPorTablas[]
+  pares: ParIntersec[]
+  docsEnTodas: number
+  totalDocumentosUnicos: number
+}
+
+export async function obtenerDashboardArchivos(): Promise<DashboardArchivos> {
+  await requireAdmin()
+
+  const [t0, t1, t2, t3] = await Promise.all([
+    prisma.archivo0Registro.count(),
+    prisma.archivo1Registro.count(),
+    prisma.archivo2Registro.count(),
+    prisma.archivo3Registro.count(),
+  ])
+
+  const totales: DashboardArchivos['totales'] = [
+    { archivo: 'archivo0', registros: t0 },
+    { archivo: 'archivo1', registros: t1 },
+    { archivo: 'archivo2', registros: t2 },
+    { archivo: 'archivo3', registros: t3 },
+  ]
+
+  const raw = await prisma.$queryRaw<{ tablas: bigint; cantidad: bigint }[]>`
+    WITH docs AS (
+      SELECT "numeroDocumento", 'a0' AS src FROM "Archivo0Registro"
+      UNION ALL
+      SELECT "numeroDocumento", 'a1' FROM "Archivo1Registro"
+      UNION ALL
+      SELECT "numeroDocumento", 'a2' FROM "Archivo2Registro"
+      UNION ALL
+      SELECT "numeroDocumento", 'a3' FROM "Archivo3Registro"
+    ),
+    conteo AS (
+      SELECT "numeroDocumento", COUNT(DISTINCT src) AS tablas
+      FROM docs
+      GROUP BY "numeroDocumento"
+    )
+    SELECT tablas, COUNT(*)::bigint AS cantidad
+    FROM conteo
+    GROUP BY tablas
+    ORDER BY tablas
+  `
+
+  const overlap = raw.map((r) => ({
+    tablas: Number(r.tablas),
+    cantidad: Number(r.cantidad),
+  }))
+
+  const totalDocsRaw = await prisma.$queryRaw<{ total: bigint }[]>`
+    SELECT COUNT(*)::bigint AS total FROM (
+      SELECT "numeroDocumento" FROM "Archivo0Registro"
+      UNION
+      SELECT "numeroDocumento" FROM "Archivo1Registro"
+      UNION
+      SELECT "numeroDocumento" FROM "Archivo2Registro"
+      UNION
+      SELECT "numeroDocumento" FROM "Archivo3Registro"
+    ) u
+  `
+  const totalDocumentosUnicos = Number(totalDocsRaw[0].total)
+
+  const docsEnTodas = overlap.find((o) => o.tablas === 4)?.cantidad ?? 0
+
+  const pares: ParIntersec[] = []
+  const combos = [
+    ['Archivo 0', 'Archivo 1', '"Archivo0Registro"', '"Archivo1Registro"'],
+    ['Archivo 0', 'Archivo 2', '"Archivo0Registro"', '"Archivo2Registro"'],
+    ['Archivo 0', 'Archivo 3', '"Archivo0Registro"', '"Archivo3Registro"'],
+    ['Archivo 1', 'Archivo 2', '"Archivo1Registro"', '"Archivo2Registro"'],
+    ['Archivo 1', 'Archivo 3', '"Archivo1Registro"', '"Archivo3Registro"'],
+    ['Archivo 2', 'Archivo 3', '"Archivo2Registro"', '"Archivo3Registro"'],
+  ]
+
+  for (const [a, b, ta, tb] of combos) {
+    const res = await prisma.$queryRawUnsafe<{ cnt: bigint }[]>(
+      `SELECT COUNT(*)::bigint AS cnt FROM ${ta} x INNER JOIN ${tb} y ON x."numeroDocumento" = y."numeroDocumento"`,
+    )
+    pares.push({ tablaA: a as string, tablaB: b as string, cantidad: Number(res[0].cnt) })
+  }
+
+  return { totales, overlap, pares, docsEnTodas, totalDocumentosUnicos }
+}
