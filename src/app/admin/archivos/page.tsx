@@ -158,6 +158,7 @@ export default function ArchivosPage() {
   const [buscandoRel, setBuscandoRel] = useState(false)
 
   const [cuadros, setCuadros] = useState<CuadroData[]>([])
+  const [cuadroActivo, setCuadroActivo] = useState<number | null>(null)
   const [generandoCuadros, setGenerandoCuadros] = useState<Set<number>>(new Set())
   const [generandoTodos, setGenerandoTodos] = useState(false)
 
@@ -170,8 +171,15 @@ export default function ArchivosPage() {
   }, [])
 
   const cargarCuadros = useCallback(async () => {
-    try { setCuadros(await listarCuadros()) }
-    catch { setCuadros([]) }
+    try {
+      const lista = await listarCuadros()
+      setCuadros(lista)
+      if (lista.length > 0) {
+        setCuadroActivo(prev => prev !== null && lista.find(c => c.numero === prev) ? prev : lista[0].numero)
+      } else {
+        setCuadroActivo(null)
+      }
+    } catch { setCuadros([]) }
   }, [])
 
   const cargarDashboard = useCallback(async () => {
@@ -555,71 +563,92 @@ export default function ArchivosPage() {
             </div>
           )}
 
-          <div className="space-y-3">
-            {cuadros.map((cq) => (
-              <details key={cq.numero} className="card-hover group open:ring-1 open:ring-brand/20">
-                <summary className="flex items-center justify-between px-5 py-3 cursor-pointer list-none">
-                  <div className="flex-1 min-w-0">
-                    <span className="text-sm font-semibold text-foreground">{cq.nombre}</span>
-                    {cq.resumen && <span className="ml-2 text-xs text-muted">— {cq.resumen}</span>}
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0 ml-4">
-                    <button onClick={async (e) => {
-                      e.stopPropagation()
-                      setGenerandoCuadros(prev => new Set(prev).add(cq.numero))
-                      try {
-                        await generarCuadro(cq.numero)
-                        await cargarCuadros()
-                      } finally {
-                        setGenerandoCuadros(prev => { const n = new Set(prev); n.delete(cq.numero); return n })
-                      }
-                    }} disabled={generandoCuadros.has(cq.numero)} className="text-xs text-brand hover:text-brand-dark font-semibold">
-                      {generandoCuadros.has(cq.numero) ? 'Generando...' : 'Regenerar'}
-                    </button>
-                    <button onClick={async (e) => {
-                      e.stopPropagation()
-                      await borrarCuadro(cq.numero)
-                      await cargarCuadros()
-                    }} className="text-xs text-red-500 hover:text-red-700">Borrar</button>
-                    <svg className="h-4 w-4 text-muted transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-                    </svg>
-                  </div>
-                </summary>
-                <div className="border-t border-border px-5 py-4">
-                  {cq.filas.length === 0 ? (
-                    <p className="text-sm text-muted">Sin datos.</p>
-                  ) : (
-                    <div className="space-y-6">
-                      <CuadroChart cuadro={cq} />
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b border-border text-left text-xs text-muted">
-                              {cq.columnas.map((col, i) => (
-                                <th key={i} className="px-3 py-2 font-semibold whitespace-nowrap">{col}</th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-border">
-                            {cq.filas.map((fila, fi) => (
-                              <tr key={fi} className="hover:bg-gray-50/50 text-xs">
-                                {fila.map((celda, ci) => (
-                                  <td key={ci} className={`px-3 py-1.5 ${ci === 0 ? 'font-medium text-foreground' : 'text-muted'} ${typeof celda === 'number' ? 'text-right font-mono' : ''}`}>
-                                    {typeof celda === 'number' ? celda.toLocaleString() : celda}
-                                  </td>
-                                ))}
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+          {cuadros.length > 0 && (
+            <div className="flex gap-6 min-h-[400px]">
+              <nav className="w-64 shrink-0 overflow-y-auto border-r border-border pr-4 space-y-0.5 max-h-[600px]">
+                {cuadros.map((cq) => (
+                  <button key={cq.numero} onClick={() => setCuadroActivo(cq.numero)}
+                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition ${
+                      cuadroActivo === cq.numero
+                        ? 'bg-brand/10 text-brand font-semibold'
+                        : 'text-muted hover:text-foreground hover:bg-gray-50'
+                    }`}
+                  >
+                    <span className="block truncate">{cq.nombre}</span>
+                    {cq.resumen && <span className="block text-xs text-muted truncate mt-0.5">{cq.resumen}</span>}
+                  </button>
+                ))}
+              </nav>
+
+              <div className="flex-1 min-w-0">
+                {(() => {
+                  const activo = cuadros.find(c => c.numero === cuadroActivo) ?? cuadros[0]
+                  if (!activo) return <p className="text-sm text-muted py-8">Seleccioná un cuadro.</p>
+
+                  return (
+                    <div>
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="min-w-0">
+                          <h3 className="text-lg font-bold text-foreground truncate">{activo.nombre}</h3>
+                          {activo.resumen && <p className="text-sm text-muted mt-0.5">{activo.resumen}</p>}
+                        </div>
+                        <div className="flex gap-2 shrink-0 ml-4">
+                          <button onClick={async () => {
+                            setGenerandoCuadros(prev => new Set(prev).add(activo.numero))
+                            try {
+                              await generarCuadro(activo.numero)
+                              await cargarCuadros()
+                            } finally {
+                              setGenerandoCuadros(prev => { const n = new Set(prev); n.delete(activo.numero); return n })
+                            }
+                          }} disabled={generandoCuadros.has(activo.numero)} className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-brand hover:bg-brand/5 transition">
+                            {generandoCuadros.has(activo.numero) ? 'Generando...' : 'Regenerar'}
+                          </button>
+                          <button onClick={async () => {
+                            await borrarCuadro(activo.numero)
+                            await cargarCuadros()
+                            if (cuadroActivo === activo.numero) setCuadroActivo(null)
+                          }} className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 transition">
+                            Borrar
+                          </button>
+                        </div>
                       </div>
+
+                      {activo.filas.length === 0 ? (
+                        <p className="text-sm text-muted py-8">Sin datos. Generá el cuadro.</p>
+                      ) : (
+                        <div className="space-y-6">
+                          <CuadroChart cuadro={activo} />
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                              <thead>
+                                <tr className="border-b border-border text-left text-xs text-muted">
+                                  {activo.columnas.map((col, i) => (
+                                    <th key={i} className="px-3 py-2 font-semibold whitespace-nowrap">{col}</th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-border">
+                                {activo.filas.map((fila, fi) => (
+                                  <tr key={fi} className="hover:bg-gray-50/50 text-xs">
+                                    {fila.map((celda, ci) => (
+                                      <td key={ci} className={`px-3 py-1.5 ${ci === 0 ? 'font-medium text-foreground' : 'text-muted'} ${typeof celda === 'number' ? 'text-right font-mono' : ''}`}>
+                                        {typeof celda === 'number' ? celda.toLocaleString() : celda}
+                                      </td>
+                                    ))}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              </details>
-            ))}
-          </div>
+                  )
+                })()}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     )
