@@ -2,6 +2,9 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell,
+} from 'recharts'
+import {
   parsearArchivo0, parsearArchivo1, parsearArchivo2, parsearArchivo3,
   importarArchivo0, importarArchivo1, importarArchivo2, importarArchivo3,
   vaciarArchivo, buscarRelacionados, obtenerResumenArchivo, obtenerDashboardArchivos,
@@ -587,27 +590,30 @@ export default function ArchivosPage() {
                   {cq.filas.length === 0 ? (
                     <p className="text-sm text-muted">Sin datos.</p>
                   ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-border text-left text-xs text-muted">
-                            {cq.columnas.map((col, i) => (
-                              <th key={i} className="px-3 py-2 font-semibold whitespace-nowrap">{col}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border">
-                          {cq.filas.map((fila, fi) => (
-                            <tr key={fi} className="hover:bg-gray-50/50 text-xs">
-                              {fila.map((celda, ci) => (
-                                <td key={ci} className={`px-3 py-1.5 ${ci === 0 ? 'font-medium text-foreground' : 'text-muted'} ${typeof celda === 'number' ? 'text-right font-mono' : ''}`}>
-                                  {typeof celda === 'number' ? celda.toLocaleString() : celda}
-                                </td>
+                    <div className="space-y-6">
+                      <CuadroChart cuadro={cq} />
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-border text-left text-xs text-muted">
+                              {cq.columnas.map((col, i) => (
+                                <th key={i} className="px-3 py-2 font-semibold whitespace-nowrap">{col}</th>
                               ))}
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody className="divide-y divide-border">
+                            {cq.filas.map((fila, fi) => (
+                              <tr key={fi} className="hover:bg-gray-50/50 text-xs">
+                                {fila.map((celda, ci) => (
+                                  <td key={ci} className={`px-3 py-1.5 ${ci === 0 ? 'font-medium text-foreground' : 'text-muted'} ${typeof celda === 'number' ? 'text-right font-mono' : ''}`}>
+                                    {typeof celda === 'number' ? celda.toLocaleString() : celda}
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -838,4 +844,117 @@ export default function ArchivosPage() {
       )}
     </div>
   )
+}
+
+const CHART_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#e11d48', '#14b8a6', '#f97316', '#a855f7']
+const CHART_LABEL_COLORS = { label: '#6b7280', axis: '#9ca3af', grid: '#e5e7eb' }
+
+function esColumnaNumerica(col: string): boolean {
+  return ['valor', 'valores', 'cantidad', 'cantidades', 'total', 'totales', 'estudiantes', 'materias', 'exámenes', 'registros', 'egresados', 'examenes'].includes(col.toLowerCase())
+}
+
+function determinarValorIdx(columnas: string[]): number {
+  for (let i = columnas.length - 1; i >= 0; i--) {
+    if (esColumnaNumerica(columnas[i])) return i
+    if (typeof columnas[i] === 'string' && i > 0 && columnas[i].match(/cantidad|materias|examenes|valor|total|estudiantes|registros|egresados|alumnos/i)) return i
+  }
+  return columnas.length - 1
+}
+
+function CuadroChart({ cuadro }: { cuadro: CuadroData }) {
+  const colCount = cuadro.columnas.length
+  const valorIdx = determinarValorIdx(cuadro.columnas)
+
+  if (cuadro.filas.length === 0) return null
+
+  if (colCount < 2) return null
+
+  if (colCount === 2) {
+    const data = cuadro.filas.map(f => ({
+      name: String(f[0]),
+      value: Number(f[1]) || 0,
+    }))
+    const maxV = Math.max(...data.map(d => d.value), 1)
+
+    return (
+      <div className="bg-white rounded-lg">
+        <ResponsiveContainer width="100%" height={Math.max(180, Math.min(400, data.length * 32))}>
+          <BarChart data={data} layout="vertical" margin={{ left: 20, right: 20, top: 8, bottom: 8 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke={CHART_LABEL_COLORS.grid} horizontal={false} />
+            <XAxis type="number" tick={{ fontSize: 11, fill: CHART_LABEL_COLORS.axis }} tickFormatter={(v: number) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v)} domain={[0, maxV * 1.15]} />
+            <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: CHART_LABEL_COLORS.label }} width={120} />
+            <Tooltip
+              contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 12 }}
+              formatter={(v) => [Number(v).toLocaleString(), 'Valor']}
+            />
+            <Bar dataKey="value" fill="#6366f1" radius={[0, 4, 4, 0]} maxBarSize={28} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    )
+  }
+
+  if (colCount >= 3) {
+    const labelIdx = 0
+    const catIdx = colCount > 3 ? 1 : null
+    const valIdx = valorIdx
+
+    if (catIdx !== null) {
+      const categorias = [...new Set(cuadro.filas.map(f => String(f[catIdx])))]
+      const labels = [...new Set(cuadro.filas.map(f => String(f[labelIdx])))]
+      const data = labels.map(label => {
+        const row: Record<string, string | number> = { name: label }
+        for (const cat of categorias) {
+          const found = cuadro.filas.find(f => String(f[labelIdx]) === label && String(f[catIdx]) === cat)
+          row[String(cat)] = found ? Number(found[valIdx]) : 0
+        }
+        return row
+      })
+
+      return (
+        <div className="bg-white rounded-lg">
+          <ResponsiveContainer width="100%" height={Math.max(200, Math.min(400, data.length * 40))}>
+            <BarChart data={data} margin={{ left: 20, right: 20, top: 8, bottom: 8 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={CHART_LABEL_COLORS.grid} />
+              <XAxis dataKey="name" tick={{ fontSize: 11, fill: CHART_LABEL_COLORS.label }} />
+              <YAxis tick={{ fontSize: 11, fill: CHART_LABEL_COLORS.axis }} />
+              <Tooltip
+                contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 12 }}
+                formatter={(v) => [Number(v).toLocaleString(), '']}
+              />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
+              {categorias.map((cat, i) => (
+                <Bar key={cat} dataKey={String(cat)} fill={CHART_COLORS[i % CHART_COLORS.length]} radius={[4, 4, 0, 0]} maxBarSize={24} stackId={cuadro.numero === 8 || cuadro.numero === 9 || cuadro.numero === 10 || cuadro.numero === 15 ? 'stack' : undefined} />
+              ))}
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )
+    }
+
+    const data = cuadro.filas.map(f => ({
+      name: String(f[labelIdx]),
+      value: Number(f[valIdx]) || 0,
+    }))
+    const maxV = Math.max(...data.map(d => d.value), 1)
+
+    return (
+      <div className="bg-white rounded-lg">
+        <ResponsiveContainer width="100%" height={Math.max(180, Math.min(400, data.length * 32))}>
+          <BarChart data={data} layout="vertical" margin={{ left: 20, right: 20, top: 8, bottom: 8 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke={CHART_LABEL_COLORS.grid} horizontal={false} />
+            <XAxis type="number" tick={{ fontSize: 11, fill: CHART_LABEL_COLORS.axis }} tickFormatter={(v: number) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v)} domain={[0, maxV * 1.15]} />
+            <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: CHART_LABEL_COLORS.label }} width={120} />
+            <Tooltip
+              contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 12 }}
+              formatter={(v) => [Number(v).toLocaleString(), cuadro.columnas[valIdx]]}
+            />
+            <Bar dataKey="value" fill="#6366f1" radius={[0, 4, 4, 0]} maxBarSize={28} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    )
+  }
+
+  return null
 }
