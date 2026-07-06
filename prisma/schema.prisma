@@ -189,3 +189,174 @@ model AraucanoImportacion {
 
   registros AraucanoRegistro[]
 }
+
+model Archivo0Registro {
+  id                        String   @id @default(cuid())
+
+  apellido                  String
+  nombres                   String
+  tipoDocumento             Int
+  numeroDocumento           String
+  cuil                      String
+  genero                    Int
+  fechaNacimiento           DateTime
+  cue                       String
+  horasTrabajo              String
+  nivelPadre                Int
+  nivelMadre                Int
+  paisNacimiento            Int
+  paisProcedencia           Int
+  fechaIngresoPais          DateTime?
+  paisTitulo                Int
+  localidad                 Int?
+  identidadGenero           Int
+  identidadGeneroTexto      String?
+  puebloOriginario          Int?
+  puebloTexto               String?
+  discapacidad              String  @default("N")
+  tieneCud                  String  @default("N")
+  auditiva                  String  @default("N")
+  visual                    String  @default("N")
+  motora                    String  @default("N")
+  psicosocial               String  @default("N")
+  otraDiscapacidad          String  @default("N")
+  descripcionDiscapacidad   String?
+
+  importacionId             String?
+  importacion               Archivo0Importacion? @relation(fields: [importacionId], references: [id], onDelete: Cascade)
+
+  createdAt                 DateTime @default(now())
+
+  @@index([numeroDocumento])
+  @@index([cuil])
+}
+
+model Archivo0Importacion {
+  id        String   @id @default(cuid())
+  filename  String
+  filas     Int
+  importados Int    @default(0)
+  errores   Int     @default(0)
+  createdAt DateTime @default(now())
+
+  registros Archivo0Registro[]
+}
+
+model Archivo1Registro {
+  id                String   @id @default(cuid())
+
+  tipoDocumento     Int
+  numeroDocumento   String
+  cuil              String
+  unidadAcademica   Int
+  codigoTitulo      Int
+  anioCohorte       Int
+  fechaIngreso      DateTime
+  formaIngreso      Int
+  fechaEgreso       DateTime?
+  dependenciaIngreso Int
+  dependenciaEgreso Int?
+  requiereTesis     String
+
+  importacionId     String?
+  importacion       Archivo1Importacion? @relation(fields: [importacionId], references: [id], onDelete: Cascade)
+
+  createdAt         DateTime @default(now())
+
+  @@index([numeroDocumento])
+  @@index([cuil])
+}
+
+model Archivo1Importacion {
+  id        String   @id @default(cuid())
+  filename  String
+  filas     Int
+  importados Int    @default(0)
+  errores   Int     @default(0)
+  createdAt DateTime @default(now())
+
+  registros Archivo1Registro[]
+}
+
+model Archivo2Registro {
+  id                String   @id @default(cuid())
+
+  tipoDocumento     Int
+  numeroDocumento   String
+  cuil              String
+  unidadAcademica   Int
+  codigoTitulo      Int
+  fechaAprobacion   DateTime
+  estado            Int
+  codigoMateria     String
+  nombreMateria     String
+  cargaHoraria      Int?
+  obligatoriedad    Int?
+  formaAprobacion   Int
+  dependencia       Int
+  anioCursada       Int?
+  libro             String?
+  acta              String?
+  folio             String?
+  expediente        String?
+
+  importacionId     String?
+  importacion       Archivo2Importacion? @relation(fields: [importacionId], references: [id], onDelete: Cascade)
+
+  createdAt         DateTime @default(now())
+
+  @@index([numeroDocumento])
+  @@index([cuil])
+}
+
+model Archivo2Importacion {
+  id        String   @id @default(cuid())
+  filename  String
+  filas     Int
+  importados Int    @default(0)
+  errores   Int     @default(0)
+  createdAt DateTime @default(now())
+
+  registros Archivo2Registro[]
+}
+
+model Archivo3Registro {
+  id                String   @id @default(cuid())
+
+  tipoDocumento     Int
+  numeroDocumento   String
+  cuil              String
+  unidadAcademica   Int
+  codigoTitulo      Int
+  fechaRegularizacion DateTime
+  estado            Int
+  codigoMateria     String
+  nombreMateria     String
+  cargaHoraria      Int?
+  obligatoriedad    Int?
+  formaRegularizacion Int
+  dependencia       Int
+  libro             String?
+  acta              String?
+  folio             String?
+  expediente        String?
+
+  importacionId     String?
+  importacion       Archivo3Importacion? @relation(fields: [importacionId], references: [id], onDelete: Cascade)
+
+  createdAt         DateTime @default(now())
+
+  @@index([numeroDocumento])
+  @@index([cuil])
+}
+
+model Archivo3Importacion {
+  id        String   @id @default(cuid())
+  filename  String
+  filas     Int
+  importados Int    @default(0)
+  errores   Int     @default(0)
+  createdAt DateTime @default(now())
+
+  registros Archivo3Registro[]
+}
