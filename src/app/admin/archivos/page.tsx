@@ -579,7 +579,7 @@ export default function ArchivosPage() {
         ))}
       </nav>
 
-      {tab === 'relacionadas' ? renderRelacionadas() : (
+      {tab === 'dashboard' ? renderDashboard() : tab === 'relacionadas' ? renderRelacionadas() : (
         <>
           <div className="grid grid-cols-3 gap-4">
             <div className="card-hover"><div className="px-5 py-4">
