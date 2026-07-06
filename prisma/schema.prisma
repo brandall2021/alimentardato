@@ -360,3 +360,13 @@ model Archivo3Importacion {
 
   registros Archivo3Registro[]
 }
+
+model CuadroEstadistico {
+  id        String   @id @default(cuid())
+  numero    Int
+  nombre    String
+  data      Json
+  createdAt DateTime @default(now())
+
+  @@unique([numero])
+}

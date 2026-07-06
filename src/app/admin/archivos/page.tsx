@@ -5,9 +5,10 @@ import {
   parsearArchivo0, parsearArchivo1, parsearArchivo2, parsearArchivo3,
   importarArchivo0, importarArchivo1, importarArchivo2, importarArchivo3,
   vaciarArchivo, buscarRelacionados, obtenerResumenArchivo, obtenerDashboardArchivos,
+  listarCuadros, generarCuadro, borrarCuadro, regenerarTodosLosCuadros, borrarTodosLosCuadros,
   type ArchivoKey, type ResultadoRelacionado,
   type LineaA0, type LineaA1, type LineaA2, type LineaA3,
-  type DashboardArchivos,
+  type DashboardArchivos, type CuadroData,
 } from '@/actions/archivos'
 
 type TabId = ArchivoKey | 'dashboard' | 'relacionadas'
@@ -153,6 +154,10 @@ export default function ArchivosPage() {
   const [resultadosRelacion, setResultadosRelacion] = useState<ResultadoRelacionado[] | null>(null)
   const [buscandoRel, setBuscandoRel] = useState(false)
 
+  const [cuadros, setCuadros] = useState<CuadroData[]>([])
+  const [generandoCuadros, setGenerandoCuadros] = useState<Set<number>>(new Set())
+  const [generandoTodos, setGenerandoTodos] = useState(false)
+
   const archivoActual = tab as ArchivoKey
   const info = ARCHIVOS[archivoActual]
 
@@ -161,12 +166,17 @@ export default function ArchivosPage() {
     catch { setDatosArchivo(null) }
   }, [])
 
+  const cargarCuadros = useCallback(async () => {
+    try { setCuadros(await listarCuadros()) }
+    catch { setCuadros([]) }
+  }, [])
+
   const cargarDashboard = useCallback(async () => {
     try { setDashboard(await obtenerDashboardArchivos()) }
     catch { setDashboard(null) }
   }, [])
 
-  useEffect(() => { cargarDashboard() }, [cargarDashboard])
+  useEffect(() => { cargarDashboard(); cargarCuadros() }, [cargarDashboard, cargarCuadros])
 
   const handleCambiarTab = useCallback((t: TabId) => {
     setTab(t)
@@ -499,6 +509,111 @@ export default function ArchivosPage() {
               <p className="text-sm text-muted">en las 4 tablas</p>
             </div>
           </section>
+        </div>
+
+        <div className="border-t border-border pt-6 mt-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-xl font-bold">Cuadros Estadísticos</h2>
+              <p className="text-sm text-muted">19 cuadros generados desde los datos importados.</p>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={async () => {
+                setGenerandoTodos(true)
+                try {
+                  await regenerarTodosLosCuadros()
+                  await cargarCuadros()
+                } finally { setGenerandoTodos(false) }
+              }} disabled={generandoTodos} className="btn-primary text-sm">
+                {generandoTodos ? (
+                  <><span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent mr-1" /> Generando...</>
+                ) : 'Generar todos'}
+              </button>
+              <button onClick={async () => {
+                if (!confirm('¿Borrar todos los cuadros?')) return
+                await borrarTodosLosCuadros()
+                await cargarCuadros()
+              }} className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50">
+                Borrar todos
+              </button>
+            </div>
+          </div>
+
+          {cuadros.length === 0 && !generandoTodos && (
+            <div className="rounded-lg border border-dashed border-border p-8 text-center">
+              <p className="text-sm text-muted">No hay cuadros generados. Hacé clic en "Generar todos".</p>
+            </div>
+          )}
+
+          {generandoTodos && (
+            <div className="flex items-center gap-3 text-sm text-muted py-4">
+              <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-brand border-t-transparent" />
+              Generando los 19 cuadros...
+            </div>
+          )}
+
+          <div className="space-y-3">
+            {cuadros.map((cq) => (
+              <details key={cq.numero} className="card-hover group open:ring-1 open:ring-brand/20">
+                <summary className="flex items-center justify-between px-5 py-3 cursor-pointer list-none">
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-semibold text-foreground">{cq.nombre}</span>
+                    {cq.resumen && <span className="ml-2 text-xs text-muted">— {cq.resumen}</span>}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0 ml-4">
+                    <button onClick={async (e) => {
+                      e.stopPropagation()
+                      setGenerandoCuadros(prev => new Set(prev).add(cq.numero))
+                      try {
+                        await generarCuadro(cq.numero)
+                        await cargarCuadros()
+                      } finally {
+                        setGenerandoCuadros(prev => { const n = new Set(prev); n.delete(cq.numero); return n })
+                      }
+                    }} disabled={generandoCuadros.has(cq.numero)} className="text-xs text-brand hover:text-brand-dark font-semibold">
+                      {generandoCuadros.has(cq.numero) ? 'Generando...' : 'Regenerar'}
+                    </button>
+                    <button onClick={async (e) => {
+                      e.stopPropagation()
+                      await borrarCuadro(cq.numero)
+                      await cargarCuadros()
+                    }} className="text-xs text-red-500 hover:text-red-700">Borrar</button>
+                    <svg className="h-4 w-4 text-muted transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                    </svg>
+                  </div>
+                </summary>
+                <div className="border-t border-border px-5 py-4">
+                  {cq.filas.length === 0 ? (
+                    <p className="text-sm text-muted">Sin datos.</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-border text-left text-xs text-muted">
+                            {cq.columnas.map((col, i) => (
+                              <th key={i} className="px-3 py-2 font-semibold whitespace-nowrap">{col}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border">
+                          {cq.filas.map((fila, fi) => (
+                            <tr key={fi} className="hover:bg-gray-50/50 text-xs">
+                              {fila.map((celda, ci) => (
+                                <td key={ci} className={`px-3 py-1.5 ${ci === 0 ? 'font-medium text-foreground' : 'text-muted'} ${typeof celda === 'number' ? 'text-right font-mono' : ''}`}>
+                                  {typeof celda === 'number' ? celda.toLocaleString() : celda}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </details>
+            ))}
+          </div>
         </div>
       </div>
     )

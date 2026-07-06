@@ -821,3 +821,447 @@ export async function obtenerDashboardArchivos(): Promise<DashboardArchivos> {
 
   return { totales, overlap, pares, docsEnTodas, totalDocumentosUnicos }
 }
+
+// ─── Cuadros Estadísticos ───
+
+export interface CuadroData {
+  numero: number
+  nombre: string
+  columnas: string[]
+  filas: (string | number)[][]
+  resumen?: string
+}
+
+const CUADROS_INFO: { numero: number; nombre: string; descripcion: string }[] = [
+  { numero: 1, nombre: 'Cuadro 1. Estudiantes, Nuevos Inscriptos y Egresados de Grado.', descripcion: 'Datos generales resumidos' },
+  { numero: 2, nombre: 'Cuadro 2. Estudiantes, Nuevos Inscriptos y Egresados de Ofertas de Posgrado, por Facultades y por sexo.', descripcion: '' },
+  { numero: 3, nombre: 'Cuadro 3. Egresados del año anterior por Carreras y por Año de Ingreso a la Carrera de Grado.', descripcion: '' },
+  { numero: 4, nombre: 'Cuadro 4. Re-inscriptos según Materias Aprobadas, por Año de Ingreso a la Oferta de Grado y por Carreras.', descripcion: '' },
+  { numero: 5, nombre: 'Cuadro 5. Re-inscriptos según Exámenes Rendidos, por Año de Ingreso a la Oferta de Grado y por Carreras.', descripcion: '' },
+  { numero: 6, nombre: 'Cuadro 6. Estudiantes clasificados según Situación de Trabajo, por Unidad Académica, por Carreras y por dedicación en horas semanales.', descripcion: '' },
+  { numero: 7, nombre: 'Cuadro 7. Re-inscriptos según cantidad de Materias Aprobadas al año anterior, por Unidad Académica y por Carreras.', descripcion: '' },
+  { numero: 8, nombre: 'Cuadro 8. Estudiantes según rangos de edad, clasificados por Facultad, por Carreras y por sexo.', descripcion: '' },
+  { numero: 9, nombre: 'Cuadro 9. Nuevos Inscriptos por Primera Vez según rangos de edad, clasificados por Facultad, por Carreras y por sexo.', descripcion: '' },
+  { numero: 10, nombre: 'Cuadro 10. Nuevos Inscriptos por Equivalencia según rango de edad, clasificados por Facultad, por Carreras y por sexo.', descripcion: '' },
+  { numero: 11, nombre: 'Cuadro 11. Egresados por Equivalencia por Carreras y por Año de Ingreso.', descripcion: '' },
+  { numero: 12, nombre: 'Cuadro 12. Estudiantes Matriculados Extranjeros según rangos de edad, por Carrera y por sexo.', descripcion: '' },
+  { numero: 13, nombre: 'Cuadro 13. Estudiantes Extranjeros por Actividad Académica.', descripcion: '' },
+  { numero: 14, nombre: 'Cuadro 14. Nuevos Inscriptos según situación de trabajo por sexo y según la cantidad de horas que trabajan.', descripcion: '' },
+  { numero: 15, nombre: 'Cuadro 15. Nuevos Inscriptos por Instrucción de los padres por sexo.', descripcion: '' },
+  { numero: 16, nombre: 'Cuadro 16. Re-inscriptos de Pregrado y Grado según cantidad de Materias Aprobadas.', descripcion: '' },
+  { numero: 17, nombre: 'Cuadro 17. Re-inscriptos por Materias Regularizadas.', descripcion: '' },
+  { numero: 18, nombre: 'Cuadro 18.-Nuevos Inscriptos según Materias Aprobadas.', descripcion: '' },
+  { numero: 19, nombre: 'Cuadro 19.- Nuevos Inscriptos según Materias Regularizadas.', descripcion: '' },
+]
+
+function rangoEdad(fechaNac: Date): string {
+  const edad = new Date().getFullYear() - fechaNac.getFullYear()
+  if (edad < 18) return 'Menor 18'
+  if (edad <= 20) return '18-20'
+  if (edad <= 24) return '21-24'
+  if (edad <= 29) return '25-29'
+  if (edad <= 34) return '30-34'
+  if (edad <= 39) return '35-39'
+  if (edad <= 44) return '40-44'
+  if (edad <= 49) return '45-49'
+  if (edad <= 54) return '50-54'
+  if (edad <= 59) return '55-59'
+  return '60+'
+}
+
+const GENERO_MAP: Record<number, string> = { 1: 'Varón', 2: 'Mujer', 3: 'Otro' }
+
+async function computeCuadro(numero: number): Promise<CuadroData> {
+  const info = CUADROS_INFO[numero - 1]
+
+  switch (numero) {
+    case 1: {
+      const a0Count = await prisma.archivo0Registro.count()
+      const a1Count = await prisma.archivo1Registro.count()
+      const egresados = await prisma.archivo1Registro.count({ where: { fechaEgreso: { not: null } } })
+      const conTesis = await prisma.archivo1Registro.count({ where: { requiereTesis: 'S' } })
+      const sinTesis = await prisma.archivo1Registro.count({ where: { requiereTesis: 'N' } })
+      const porGenero = await prisma.$queryRaw<{ genero: number; cantidad: bigint }[]>`
+        SELECT a0."genero", COUNT(DISTINCT a0."numeroDocumento")::bigint AS cantidad
+        FROM "Archivo0Registro" a0 GROUP BY a0."genero" ORDER BY a0."genero"
+      `
+      return {
+        numero: 1, nombre: info.nombre,
+        columnas: ['Indicador', 'Valor'],
+        filas: [
+          ['Registros Datos Personales (Archivo 0)', a0Count],
+          ['Registros Cohorte (Archivo 1)', a1Count],
+          ['Egresados', egresados],
+          ['Requieren Tesis', conTesis],
+          ['No requieren Tesis', sinTesis],
+          ...porGenero.map(r => [GENERO_MAP[Number(r.genero)] ?? `Género ${r.genero}`, Number(r.cantidad)]),
+        ],
+        resumen: `Total ${(a0Count + a1Count).toLocaleString()} registros combinados.`,
+      }
+    }
+
+    case 2: {
+      const porUA = await prisma.$queryRaw<{ ua: number; genero: number; cantidad: bigint }[]>`
+        SELECT a1."unidadAcademica" AS ua, a0."genero", COUNT(DISTINCT a1."numeroDocumento")::bigint AS cantidad
+        FROM "Archivo1Registro" a1 LEFT JOIN "Archivo0Registro" a0 ON a1."numeroDocumento" = a0."numeroDocumento"
+        GROUP BY a1."unidadAcademica", a0."genero" ORDER BY a1."unidadAcademica", a0."genero"
+      `
+      return {
+        numero: 2, nombre: info.nombre,
+        columnas: ['Unidad Académica', 'Género', 'Cantidad'],
+        filas: porUA.map(r => [r.ua, GENERO_MAP[Number(r.genero)] ?? 'Sin dato', Number(r.cantidad)]),
+      }
+    }
+
+    case 3: {
+      const anioAnterior = new Date().getFullYear() - 1
+      const raw = await prisma.$queryRaw<{ codigoTitulo: number; anioCohorte: number; cantidad: bigint }[]>`
+        SELECT "codigoTitulo", "anioCohorte", COUNT(*)::bigint AS cantidad
+        FROM "Archivo1Registro"
+        WHERE EXTRACT(YEAR FROM "fechaEgreso") = ${anioAnterior}
+        GROUP BY "codigoTitulo", "anioCohorte" ORDER BY "codigoTitulo", "anioCohorte"
+      `
+      return {
+        numero: 3, nombre: info.nombre,
+        columnas: ['Código Carrera', 'Año Ingreso', 'Cantidad Egresados'],
+        filas: raw.map(r => [r.codigoTitulo, r.anioCohorte, Number(r.cantidad)]),
+        resumen: `Egresados del año ${anioAnterior}`,
+      }
+    }
+
+    case 4: {
+      const raw = await prisma.$queryRaw<{ anioCohorte: number; codigoTitulo: number; cantidad: bigint; materias: bigint }[]>`
+        SELECT a1."anioCohorte", a1."codigoTitulo",
+               COUNT(DISTINCT a1."numeroDocumento")::bigint AS cantidad,
+               COUNT(a2."id")::bigint AS materias
+        FROM "Archivo1Registro" a1
+        INNER JOIN "Archivo2Registro" a2 ON a1."numeroDocumento" = a2."numeroDocumento"
+        GROUP BY a1."anioCohorte", a1."codigoTitulo" ORDER BY a1."anioCohorte", a1."codigoTitulo"
+      `
+      return {
+        numero: 4, nombre: info.nombre,
+        columnas: ['Año Cohorte', 'Código Carrera', 'Estudiantes', 'Materias Aprobadas'],
+        filas: raw.map(r => [r.anioCohorte, r.codigoTitulo, Number(r.cantidad), Number(r.materias)]),
+      }
+    }
+
+    case 5: {
+      const raw = await prisma.$queryRaw<{ anioCohorte: number; codigoTitulo: number; cantidad: bigint; examenes: bigint }[]>`
+        SELECT a1."anioCohorte", a1."codigoTitulo",
+               COUNT(DISTINCT a1."numeroDocumento")::bigint AS cantidad,
+               COUNT(a2."id")::bigint AS examenes
+        FROM "Archivo1Registro" a1
+        INNER JOIN "Archivo2Registro" a2 ON a1."numeroDocumento" = a2."numeroDocumento"
+        GROUP BY a1."anioCohorte", a1."codigoTitulo" ORDER BY a1."anioCohorte", a1."codigoTitulo"
+      `
+      return {
+        numero: 5, nombre: info.nombre,
+        columnas: ['Año Cohorte', 'Código Carrera', 'Estudiantes', 'Exámenes Rendidos'],
+        filas: raw.map(r => [r.anioCohorte, r.codigoTitulo, Number(r.cantidad), Number(r.examenes)]),
+      }
+    }
+
+    case 6: {
+      const raw = await prisma.$queryRaw<{ horasTrabajo: string; unidadAcademica: number; codigoTitulo: number; cantidad: bigint }[]>`
+        SELECT a0."horasTrabajo", a1."unidadAcademica", a1."codigoTitulo", COUNT(DISTINCT a0."numeroDocumento")::bigint AS cantidad
+        FROM "Archivo0Registro" a0
+        INNER JOIN "Archivo1Registro" a1 ON a0."numeroDocumento" = a1."numeroDocumento"
+        GROUP BY a0."horasTrabajo", a1."unidadAcademica", a1."codigoTitulo"
+        ORDER BY a0."horasTrabajo", a1."unidadAcademica", a1."codigoTitulo"
+      `
+      return {
+        numero: 6, nombre: info.nombre,
+        columnas: ['Horas Trabajo', 'Unidad Académica', 'Código Carrera', 'Cantidad'],
+        filas: raw.map(r => [r.horasTrabajo || 'Sin dato', r.unidadAcademica, r.codigoTitulo, Number(r.cantidad)]),
+      }
+    }
+
+    case 7: {
+      const raw = await prisma.$queryRaw<{ unidadAcademica: number; codigoTitulo: number; cantidad: bigint; materias: bigint }[]>`
+        SELECT a1."unidadAcademica", a1."codigoTitulo",
+               COUNT(DISTINCT a1."numeroDocumento")::bigint AS cantidad,
+               COUNT(a2."id")::bigint AS materias
+        FROM "Archivo1Registro" a1
+        INNER JOIN "Archivo2Registro" a2 ON a1."numeroDocumento" = a2."numeroDocumento"
+        GROUP BY a1."unidadAcademica", a1."codigoTitulo" ORDER BY a1."unidadAcademica", a1."codigoTitulo"
+      `
+      return {
+        numero: 7, nombre: info.nombre,
+        columnas: ['Unidad Académica', 'Código Carrera', 'Estudiantes', 'Materias Aprobadas'],
+        filas: raw.map(r => [r.unidadAcademica, r.codigoTitulo, Number(r.cantidad), Number(r.materias)]),
+      }
+    }
+
+    case 8: {
+      const raw = await prisma.$queryRaw<{ edad: string; unidadAcademica: number; codigoTitulo: number; genero: number; cantidad: bigint }[]>`
+        SELECT DISTINCT a0."numeroDocumento", a0."fechaNacimiento", a1."unidadAcademica", a1."codigoTitulo", a0."genero"
+        FROM "Archivo0Registro" a0
+        INNER JOIN "Archivo1Registro" a1 ON a0."numeroDocumento" = a1."numeroDocumento"
+      `
+      const agrupado = new Map<string, number>()
+      for (const r of raw as any[]) {
+        const key = `${rangoEdad(new Date(r.fechaNacimiento))}|${r.unidadAcademica}|${r.codigoTitulo}|${r.genero}`
+        agrupado.set(key, (agrupado.get(key) || 0) + 1)
+      }
+      const filas = Array.from(agrupado.entries()).map(([k, v]) => {
+        const [edad, ua, ct, gen] = k.split('|')
+        return [edad, Number(ua), Number(ct), GENERO_MAP[Number(gen)] ?? `Género ${gen}`, v]
+      })
+      return {
+        numero: 8, nombre: info.nombre,
+        columnas: ['Rango Edad', 'Unidad Académica', 'Código Carrera', 'Género', 'Cantidad'],
+        filas,
+      }
+    }
+
+    case 9: {
+      const raw = await prisma.$queryRaw<any[]>`
+        SELECT DISTINCT a0."numeroDocumento", a0."fechaNacimiento", a1."unidadAcademica", a1."codigoTitulo", a0."genero"
+        FROM "Archivo0Registro" a0
+        INNER JOIN "Archivo1Registro" a1 ON a0."numeroDocumento" = a1."numeroDocumento"
+        WHERE a1."formaIngreso" = 1
+      `
+      const agrupado = new Map<string, number>()
+      for (const r of raw) {
+        const key = `${rangoEdad(new Date(r.fechaNacimiento))}|${r.unidadAcademica}|${r.codigoTitulo}|${r.genero}`
+        agrupado.set(key, (agrupado.get(key) || 0) + 1)
+      }
+      const filas = Array.from(agrupado.entries()).map(([k, v]) => {
+        const [edad, ua, ct, gen] = k.split('|')
+        return [edad, Number(ua), Number(ct), GENERO_MAP[Number(gen)] ?? `Género ${gen}`, v]
+      })
+      return {
+        numero: 9, nombre: info.nombre,
+        columnas: ['Rango Edad', 'Unidad Académica', 'Código Carrera', 'Género', 'Cantidad'],
+        filas,
+      }
+    }
+
+    case 10: {
+      const raw = await prisma.$queryRaw<any[]>`
+        SELECT DISTINCT a0."numeroDocumento", a0."fechaNacimiento", a1."unidadAcademica", a1."codigoTitulo", a0."genero"
+        FROM "Archivo0Registro" a0
+        INNER JOIN "Archivo1Registro" a1 ON a0."numeroDocumento" = a1."numeroDocumento"
+        WHERE a1."formaIngreso" = 2
+      `
+      const agrupado = new Map<string, number>()
+      for (const r of raw) {
+        const key = `${rangoEdad(new Date(r.fechaNacimiento))}|${r.unidadAcademica}|${r.codigoTitulo}|${r.genero}`
+        agrupado.set(key, (agrupado.get(key) || 0) + 1)
+      }
+      const filas = Array.from(agrupado.entries()).map(([k, v]) => {
+        const [edad, ua, ct, gen] = k.split('|')
+        return [edad, Number(ua), Number(ct), GENERO_MAP[Number(gen)] ?? `Género ${gen}`, v]
+      })
+      return {
+        numero: 10, nombre: info.nombre,
+        columnas: ['Rango Edad', 'Unidad Académica', 'Código Carrera', 'Género', 'Cantidad'],
+        filas,
+      }
+    }
+
+    case 11: {
+      const raw = await prisma.$queryRaw<{ codigoTitulo: number; anioCohorte: number; cantidad: bigint }[]>`
+        SELECT a1."codigoTitulo", a1."anioCohorte", COUNT(*)::bigint AS cantidad
+        FROM "Archivo1Registro" a1
+        WHERE a1."fechaEgreso" IS NOT NULL AND a1."formaIngreso" = 2
+        GROUP BY a1."codigoTitulo", a1."anioCohorte" ORDER BY a1."codigoTitulo", a1."anioCohorte"
+      `
+      return {
+        numero: 11, nombre: info.nombre,
+        columnas: ['Código Carrera', 'Año Ingreso', 'Egresados por Equivalencia'],
+        filas: raw.map(r => [r.codigoTitulo, r.anioCohorte, Number(r.cantidad)]),
+      }
+    }
+
+    case 12: {
+      const raw = await prisma.$queryRaw<any[]>`
+        SELECT DISTINCT a0."numeroDocumento", a0."fechaNacimiento", a1."codigoTitulo", a0."genero"
+        FROM "Archivo0Registro" a0
+        INNER JOIN "Archivo1Registro" a1 ON a0."numeroDocumento" = a1."numeroDocumento"
+        WHERE a0."paisProcedencia" != 0 AND a0."paisProcedencia" != 1
+      `
+      const agrupado = new Map<string, number>()
+      for (const r of raw) {
+        const key = `${rangoEdad(new Date(r.fechaNacimiento))}|${r.codigoTitulo}|${r.genero}`
+        agrupado.set(key, (agrupado.get(key) || 0) + 1)
+      }
+      const filas = Array.from(agrupado.entries()).map(([k, v]) => {
+        const [edad, ct, gen] = k.split('|')
+        return [edad, Number(ct), GENERO_MAP[Number(gen)] ?? `Género ${gen}`, v]
+      })
+      return {
+        numero: 12, nombre: info.nombre,
+        columnas: ['Rango Edad', 'Código Carrera', 'Género', 'Cantidad'],
+        filas,
+      }
+    }
+
+    case 13: {
+      const raw = await prisma.$queryRaw<{ codigoTitulo: number; cantidad: bigint }[]>`
+        SELECT a1."codigoTitulo", COUNT(DISTINCT a1."numeroDocumento")::bigint AS cantidad
+        FROM "Archivo1Registro" a1
+        INNER JOIN "Archivo0Registro" a0 ON a1."numeroDocumento" = a0."numeroDocumento"
+        WHERE a0."paisProcedencia" != 0 AND a0."paisProcedencia" != 1
+        GROUP BY a1."codigoTitulo" ORDER BY a1."codigoTitulo"
+      `
+      return {
+        numero: 13, nombre: info.nombre,
+        columnas: ['Actividad / Carrera', 'Estudiantes Extranjeros'],
+        filas: raw.map(r => [r.codigoTitulo, Number(r.cantidad)]),
+      }
+    }
+
+    case 14: {
+      const raw = await prisma.$queryRaw<{ horasTrabajo: string; genero: number; cantidad: bigint }[]>`
+        SELECT a0."horasTrabajo", a0."genero", COUNT(DISTINCT a0."numeroDocumento")::bigint AS cantidad
+        FROM "Archivo0Registro" a0
+        INNER JOIN "Archivo1Registro" a1 ON a0."numeroDocumento" = a1."numeroDocumento"
+        WHERE a1."formaIngreso" IN (1, 2)
+        GROUP BY a0."horasTrabajo", a0."genero" ORDER BY a0."horasTrabajo", a0."genero"
+      `
+      return {
+        numero: 14, nombre: info.nombre,
+        columnas: ['Horas Trabajo', 'Género', 'Cantidad'],
+        filas: raw.map(r => [r.horasTrabajo || 'Sin dato', GENERO_MAP[Number(r.genero)] ?? 'Sin dato', Number(r.cantidad)]),
+      }
+    }
+
+    case 15: {
+      const raw = await prisma.$queryRaw<{ nivelPadre: number; nivelMadre: number; genero: number; cantidad: bigint }[]>`
+        SELECT a0."nivelPadre", a0."nivelMadre", a0."genero", COUNT(DISTINCT a0."numeroDocumento")::bigint AS cantidad
+        FROM "Archivo0Registro" a0
+        INNER JOIN "Archivo1Registro" a1 ON a0."numeroDocumento" = a1."numeroDocumento"
+        WHERE a1."formaIngreso" IN (1, 2)
+        GROUP BY a0."nivelPadre", a0."nivelMadre", a0."genero"
+        ORDER BY a0."nivelPadre", a0."nivelMadre", a0."genero"
+      `
+      return {
+        numero: 15, nombre: info.nombre,
+        columnas: ['Nivel Instrucción Padre', 'Nivel Instrucción Madre', 'Género', 'Cantidad'],
+        filas: raw.map(r => [r.nivelPadre, r.nivelMadre, GENERO_MAP[Number(r.genero)] ?? 'Sin dato', Number(r.cantidad)]),
+      }
+    }
+
+    case 16: {
+      const raw = await prisma.$queryRaw<{ cantidad: bigint; materias: bigint }[]>`
+        SELECT COUNT(DISTINCT a1."numeroDocumento")::bigint AS cantidad,
+               COUNT(a2."id")::bigint AS materias
+        FROM "Archivo1Registro" a1
+        INNER JOIN "Archivo2Registro" a2 ON a1."numeroDocumento" = a2."numeroDocumento"
+      `
+      const r = raw[0]
+      return {
+        numero: 16, nombre: info.nombre,
+        columnas: ['Indicador', 'Valor'],
+        filas: [
+          ['Re-inscriptos con materias aprobadas', Number(r?.cantidad ?? 0)],
+          ['Total materias aprobadas', Number(r?.materias ?? 0)],
+        ],
+      }
+    }
+
+    case 17: {
+      const raw = await prisma.$queryRaw<{ cantidad: bigint; materias: bigint }[]>`
+        SELECT COUNT(DISTINCT a1."numeroDocumento")::bigint AS cantidad,
+               COUNT(a3."id")::bigint AS materias
+        FROM "Archivo1Registro" a1
+        INNER JOIN "Archivo3Registro" a3 ON a1."numeroDocumento" = a3."numeroDocumento"
+      `
+      const r = raw[0]
+      return {
+        numero: 17, nombre: info.nombre,
+        columnas: ['Indicador', 'Valor'],
+        filas: [
+          ['Re-inscriptos con materias regularizadas', Number(r?.cantidad ?? 0)],
+          ['Total materias regularizadas', Number(r?.materias ?? 0)],
+        ],
+      }
+    }
+
+    case 18: {
+      const raw = await prisma.$queryRaw<{ cantidad: bigint; materias: bigint }[]>`
+        SELECT COUNT(DISTINCT a1."numeroDocumento")::bigint AS cantidad,
+               COUNT(a2."id")::bigint AS materias
+        FROM "Archivo1Registro" a1
+        INNER JOIN "Archivo2Registro" a2 ON a1."numeroDocumento" = a2."numeroDocumento"
+        WHERE a1."formaIngreso" IN (1, 2)
+      `
+      const r = raw[0]
+      return {
+        numero: 18, nombre: info.nombre,
+        columnas: ['Indicador', 'Valor'],
+        filas: [
+          ['Nuevos inscriptos con materias aprobadas', Number(r?.cantidad ?? 0)],
+          ['Total materias aprobadas', Number(r?.materias ?? 0)],
+        ],
+      }
+    }
+
+    case 19: {
+      const raw = await prisma.$queryRaw<{ cantidad: bigint; materias: bigint }[]>`
+        SELECT COUNT(DISTINCT a1."numeroDocumento")::bigint AS cantidad,
+               COUNT(a3."id")::bigint AS materias
+        FROM "Archivo1Registro" a1
+        INNER JOIN "Archivo3Registro" a3 ON a1."numeroDocumento" = a3."numeroDocumento"
+        WHERE a1."formaIngreso" IN (1, 2)
+      `
+      const r = raw[0]
+      return {
+        numero: 19, nombre: info.nombre,
+        columnas: ['Indicador', 'Valor'],
+        filas: [
+          ['Nuevos inscriptos con materias regularizadas', Number(r?.cantidad ?? 0)],
+          ['Total materias regularizadas', Number(r?.materias ?? 0)],
+        ],
+      }
+    }
+
+    default:
+      throw new Error(`Cuadro ${numero} no implementado`)
+  }
+}
+
+export async function listarCuadros(): Promise<CuadroData[]> {
+  await requireAdmin()
+  const stored = await prisma.cuadroEstadistico.findMany({ orderBy: { numero: 'asc' } })
+  return stored.map(s => ({ numero: s.numero, nombre: s.nombre, ...(s.data as Omit<CuadroData, 'numero' | 'nombre'>) }))
+}
+
+export async function generarCuadro(numero: number): Promise<CuadroData> {
+  await requireAdmin()
+  const data = await computeCuadro(numero)
+  await prisma.cuadroEstadistico.upsert({
+    where: { numero },
+    update: { nombre: data.nombre, data: { columnas: data.columnas, filas: data.filas, resumen: data.resumen } },
+    create: { numero, nombre: data.nombre, data: { columnas: data.columnas, filas: data.filas, resumen: data.resumen } },
+  })
+  revalidatePath('/admin/archivos')
+  return data
+}
+
+export async function regenerarTodosLosCuadros(): Promise<{ generados: number }> {
+  await requireAdmin()
+  let generados = 0
+  for (const info of CUADROS_INFO) {
+    await generarCuadro(info.numero)
+    generados++
+  }
+  return { generados }
+}
+
+export async function borrarCuadro(numero: number): Promise<void> {
+  await requireAdmin()
+  await prisma.cuadroEstadistico.delete({ where: { numero } })
+  revalidatePath('/admin/archivos')
+}
+
+export async function borrarTodosLosCuadros(): Promise<{ borrados: number }> {
+  await requireAdmin()
+  const todos = await prisma.cuadroEstadistico.findMany()
+  for (const c of todos) {
+    await prisma.cuadroEstadistico.delete({ where: { id: c.id } })
+  }
+  revalidatePath('/admin/archivos')
+  return { borrados: todos.length }
+}
