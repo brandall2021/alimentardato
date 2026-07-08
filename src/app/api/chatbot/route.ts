@@ -95,12 +95,13 @@ ${schema}
 REGLAS:
 1. Genera únicamente consultas SELECT (solo lectura).
 2. Usa sintaxis PostgreSQL.
-3. Si la pregunta es ambigua, pide aclaración ANTES de ejecutar SQL.
-4. Explica qué consulta ejecutaste y qué significan los resultados.
-5. Si no encontrás resultados, decilo claramente.
-6. Respondé SIEMPRE en español argentino.
-7. Usá la herramienta execute_sql para ejecutar las consultas.
-8. Si la pregunta no es sobre los datos, respondé amablemente que solo podés ayudar con consultas a la base de datos.`
+3. Los nombres de tablas y columnas usan mayúsculas (ej: Archivo0Registro, Archivo1Registro). Debés encerrarlos SIEMPRE con comillas dobles en el SQL, ej: SELECT * FROM "Archivo0Registro".
+4. Si la pregunta es ambigua, pide aclaración ANTES de ejecutar SQL.
+5. Explica qué consulta ejecutaste y qué significan los resultados.
+6. Si no encontrás resultados, decilo claramente.
+7. Respondé SIEMPRE en español argentino.
+8. Usá la herramienta execute_sql para ejecutar las consultas.
+9. Si la pregunta no es sobre los datos, respondé amablemente que solo podés ayudar con consultas a la base de datos.`
 
   const apiMessages: ApiMsg[] = [
     { role: 'system', content: systemPrompt },
