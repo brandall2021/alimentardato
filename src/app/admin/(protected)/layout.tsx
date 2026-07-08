@@ -8,7 +8,7 @@ import { BackToTop } from '@/components/back-to-top'
 const NAV_ITEMS = [
   { href: '/admin',          label: 'Dashboard',      icon: <GridIcon /> },
   { href: '/admin/alumnos',  label: 'Alumnos',        icon: <UsersIcon /> },
-  { href: '/admin/araucano', label: 'Araucano',       icon: <DocumentIcon /> },
+
   { href: '/admin/archivos', label: 'Archivos',       icon: <FolderIcon /> },
   { href: '/admin/chatbot',  label: 'Consultas SQL',  icon: <ChatIcon /> },
   { href: '/admin/consultas', label: 'Historial',     icon: <ClockIcon /> },

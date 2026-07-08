@@ -2,11 +2,14 @@ import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { Pool } from 'pg'
 import { getCachedSchema } from '@/lib/db-schema'
+import { obtenerOpenAIKey } from '@/actions/configuracion'
 import { auth } from '@/lib/auth'
 
-function getOpenAI() {
-  const key = process.env.OPENAI_API_KEY
-  if (!key) throw new Error('OPENAI_API_KEY no está configurada')
+async function getOpenAI() {
+  const envKey = process.env.OPENAI_API_KEY
+  const dbKey = envKey ? null : await obtenerOpenAIKey()
+  const key = envKey ?? dbKey
+  if (!key) throw new Error('OPENAI_API_KEY no está configurada. Agregala en /admin/configuracion o en el archivo .env')
   return new OpenAI({ apiKey: key })
 }
 
@@ -104,7 +107,7 @@ REGLAS:
   ]
 
   try {
-    const openai = getOpenAI()
+    const openai = await getOpenAI()
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: apiMessages,

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { obtenerConfig } from '@/actions/configuracion'
+import { obtenerConfig, guardarOpenAIKey } from '@/actions/configuracion'
 import { actualizarCredenciales } from '@/actions/configuracion-actions'
 import { leerEncabezadosExcel, importarDesdeExcel } from '@/actions/importacion'
 import { CAMPOS_ALUMNO, type MapeoColumnas, type CampoAlumno } from '@/lib/campos-alumno'
@@ -9,6 +9,10 @@ import { CAMPOS_ALUMNO, type MapeoColumnas, type CampoAlumno } from '@/lib/campo
 export default function ConfiguracionPage() {
   const [devEmail, setDevEmail] = useState('')
   const [hasPassword, setHasPassword] = useState(false)
+  const [hasOpenAIKey, setHasOpenAIKey] = useState(false)
+  const [openAIKeyInput, setOpenAIKeyInput] = useState('')
+  const [openAIMsg, setOpenAIMsg] = useState('')
+  const [openAIError, setOpenAIError] = useState(false)
 
   const [fileBase64, setFileBase64] = useState('')
   const [columnas, setColumnas] = useState<string[]>([])
@@ -21,6 +25,7 @@ export default function ConfiguracionPage() {
     obtenerConfig().then((c) => {
       setDevEmail(c.dev_email ?? '')
       setHasPassword(c.dev_password_set === 'true')
+      setHasOpenAIKey(c.openai_api_key_set === 'true')
     })
   }, [])
 
@@ -192,6 +197,77 @@ export default function ConfiguracionPage() {
             Guardar
           </button>
         </form>
+      </section>
+
+      <section className="card">
+        <div className="card-header">
+          <h2 className="text-base font-bold">Chatbot SQL — OpenAI</h2>
+          <p className="text-sm text-muted">
+            Configurá la API key de OpenAI para usar el asistente de consultas SQL.
+            Si ya está configurada via variable de entorno (<code className="rounded bg-gray-100 px-1 text-xs">OPENAI_API_KEY</code>),
+            podés ignorar esta sección.
+          </p>
+        </div>
+        <div className="card-body space-y-4">
+          <div className="flex items-center gap-3">
+            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+              hasOpenAIKey
+                ? 'bg-emerald-50 text-emerald-700'
+                : 'bg-amber-50 text-amber-700'
+            }`}>
+              <span className={`inline-block h-1.5 w-1.5 rounded-full ${
+                hasOpenAIKey ? 'bg-emerald-500' : 'bg-amber-500'
+              }`} />
+              {hasOpenAIKey ? 'Configurada' : 'No configurada'}
+            </span>
+            {hasOpenAIKey && (
+              <span className="text-xs text-muted-light">(la key está almacenada de forma segura y no se muestra)</span>
+            )}
+          </div>
+          <div>
+            <label htmlFor="openai-key" className="input-label">
+              {hasOpenAIKey ? 'Nueva API key (dejar vacío para mantener la actual)' : 'API key de OpenAI'}
+            </label>
+            <input
+              id="openai-key"
+              type="password"
+              value={openAIKeyInput}
+              onChange={(e) => setOpenAIKeyInput(e.target.value)}
+              placeholder={hasOpenAIKey ? '····················' : 'sk-...'}
+              className="input max-w-lg font-mono text-sm"
+            />
+          </div>
+          {openAIMsg && (
+            <div className={`rounded-lg border px-4 py-3 text-sm ${
+              openAIError
+                ? 'border-red-200 bg-red-50 text-red-800'
+                : 'border-emerald-200 bg-emerald-50 text-emerald-800'
+            }`}>
+              {openAIMsg}
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={async () => {
+              if (!openAIKeyInput.trim()) return
+              setOpenAIMsg('')
+              setOpenAIError(false)
+              try {
+                await guardarOpenAIKey(openAIKeyInput.trim())
+                setHasOpenAIKey(true)
+                setOpenAIKeyInput('')
+                setOpenAIMsg('API key guardada correctamente.')
+              } catch {
+                setOpenAIError(true)
+                setOpenAIMsg('Error al guardar la API key.')
+              }
+            }}
+            disabled={!openAIKeyInput.trim()}
+            className="btn-primary"
+          >
+            Guardar API key
+          </button>
+        </div>
       </section>
 
       <section className="card">
