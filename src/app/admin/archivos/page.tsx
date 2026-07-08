@@ -7,17 +7,16 @@ import {
 import {
   parsearArchivo0, parsearArchivo1, parsearArchivo2, parsearArchivo3,
   importarArchivo0, importarArchivo1, importarArchivo2, importarArchivo3,
-  vaciarArchivo, buscarRelacionados, obtenerResumenArchivo, obtenerDashboardArchivos,
+  vaciarArchivo, buscarRelacionados, obtenerResumenArchivo,
   listarCuadros, generarCuadro, borrarCuadro, regenerarTodosLosCuadros, borrarTodosLosCuadros,
   type ArchivoKey, type ResultadoRelacionado,
   type LineaA0, type LineaA1, type LineaA2, type LineaA3,
-  type DashboardArchivos, type CuadroData,
+  type CuadroData,
 } from '@/actions/archivos'
 
-type TabId = ArchivoKey | 'dashboard' | 'relacionadas'
+type TabId = ArchivoKey | 'relacionadas'
 
 const TABS: { key: TabId; label: string }[] = [
-  { key: 'dashboard', label: 'Dashboard' },
   { key: 'archivo0', label: 'Archivo 0' },
   { key: 'archivo1', label: 'Archivo 1' },
   { key: 'archivo2', label: 'Archivo 2' },
@@ -140,8 +139,7 @@ function renderA3(l: LineaA3) {
 }
 
 export default function ArchivosPage() {
-  const [tab, setTab] = useState<TabId>('dashboard')
-  const [dashboard, setDashboard] = useState<DashboardArchivos | null>(null)
+  const [tab, setTab] = useState<TabId>('archivo0')
   const [fileBase64, setFileBase64] = useState('')
   const [lineas, setLineas] = useState<(LineaA0 | LineaA1 | LineaA2 | LineaA3)[]>([])
   const [paso, setPaso] = useState<'seleccionar' | 'preview' | 'importando' | 'resultado'>('seleccionar')
@@ -182,19 +180,11 @@ export default function ArchivosPage() {
     } catch { setCuadros([]) }
   }, [])
 
-  const cargarDashboard = useCallback(async () => {
-    try { setDashboard(await obtenerDashboardArchivos()) }
-    catch { setDashboard(null) }
-  }, [])
-
   useEffect(() => {
-    const init = async () => {
-      const [dash, cuadros] = await Promise.all([obtenerDashboardArchivos(), listarCuadros()])
-      setDashboard(dash)
+    listarCuadros().then((cuadros) => {
       setCuadros(cuadros)
       if (cuadros.length > 0) setCuadroActivo(cuadros[0].numero)
-    }
-    init().catch(() => {})
+    }).catch(() => {})
   }, [])
 
   const handleCambiarTab = useCallback((t: TabId) => {
@@ -206,9 +196,8 @@ export default function ArchivosPage() {
     setDetallesError([])
     setConfirmarVaciar(false)
     setResultadosRelacion(null)
-    if (t === 'dashboard') cargarDashboard()
-    else if (t !== 'relacionadas') cargarDatosArchivo(t)
-  }, [cargarDatosArchivo, cargarDashboard])
+    if (t !== 'relacionadas') cargarDatosArchivo(t)
+  }, [cargarDatosArchivo])
 
   const handleSeleccionarArchivo = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -358,310 +347,6 @@ export default function ArchivosPage() {
     }
   }
 
-  function renderDashboard() {
-    if (!dashboard) {
-      return <div className="flex items-center gap-3 text-sm text-muted py-8">
-        <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-brand border-t-transparent" />
-        Cargando dashboard...
-      </div>
-    }
-
-    const etiquetas = ['Archivo 0', 'Archivo 1', 'Archivo 2', 'Archivo 3']
-    const colores = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444']
-    const totalGlobal = dashboard.totales.reduce((s, t) => s + t.registros, 0)
-
-    const maxReg = Math.max(...dashboard.totales.map((t) => t.registros), 1)
-    const maxOverlap = Math.max(...dashboard.overlap.map((o) => o.cantidad), 1)
-
-    const archivoDocs = dashboard.totales.map((t) => t.registros)
-    const totalArchivos = archivoDocs.reduce((a, b) => a + b, 0)
-
-    return (
-      <div className="space-y-6">
-        <header>
-          <p className="text-sm font-semibold uppercase tracking-wide text-accent">Dashboard</p>
-          <h2 className="mt-1 text-2xl font-bold">Panorama general</h2>
-          <p className="mt-1 text-sm text-muted">
-            {dashboard.totalDocumentosUnicos.toLocaleString()} documentos únicos distribuidos en {totalArchivos.toLocaleString()} registros.
-          </p>
-        </header>
-
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {dashboard.totales.map((t, i) => (
-            <div key={t.archivo} className="card-hover" style={{ borderTop: `3px solid ${colores[i]}` }}>
-              <div className="px-5 py-4">
-                <p className="stat-label">{etiquetas[i]}</p>
-                <p className="stat-value">{t.registros.toLocaleString()}</p>
-                <p className="mt-1 text-xs text-muted">
-                  {totalGlobal > 0 ? ((t.registros / totalGlobal) * 100).toFixed(1) : 0}% del total
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <section className="card-hover">
-            <div className="card-header">
-              <h2 className="text-base font-bold">Registros por archivo</h2>
-            </div>
-            <div className="card-body">
-              <div className="space-y-3">
-                {dashboard.totales.map((t, i) => (
-                  <div key={t.archivo} className="flex items-center gap-3">
-                    <span className="w-24 text-sm font-medium text-foreground shrink-0">{etiquetas[i]}</span>
-                    <div className="flex-1 h-5 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all"
-                        style={{ width: `${(t.registros / maxReg) * 100}%`, backgroundColor: colores[i] }}
-                      />
-                    </div>
-                    <span className="text-sm font-semibold text-muted w-20 text-right">{t.registros.toLocaleString()}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          <section className="card-hover">
-            <div className="card-header">
-              <h2 className="text-base font-bold">Documentos por cantidad de tablas</h2>
-              <p className="text-xs text-muted">Cuántos documentos aparecen en 1, 2, 3 o 4 tablas</p>
-            </div>
-            <div className="card-body">
-              <div className="space-y-3">
-                {dashboard.overlap.map((o) => (
-                  <div key={o.tablas} className="flex items-center gap-3">
-                    <span className="w-28 text-sm text-foreground shrink-0">
-                      En {o.tablas} tabla{o.tablas !== 1 ? 's' : ''}
-                    </span>
-                    <div className="flex-1 h-5 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-brand/70"
-                        style={{ width: `${(o.cantidad / maxOverlap) * 100}%` }}
-                      />
-                    </div>
-                    <span className="text-sm font-semibold text-muted w-20 text-right">{o.cantidad.toLocaleString()}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-        </div>
-
-        <section className="card-hover">
-          <div className="card-header">
-            <h2 className="text-base font-bold">Intersección entre tablas</h2>
-            <p className="text-xs text-muted">Documentos compartidos entre pares de archivos</p>
-          </div>
-          <div className="card-body">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border text-left text-xs text-muted">
-                    <th className="px-4 py-2 font-semibold">Tabla A</th>
-                    <th className="px-4 py-2 font-semibold">Tabla B</th>
-                    <th className="px-4 py-2 font-semibold text-right">Documentos compartidos</th>
-                    <th className="px-4 py-2 font-semibold text-right">% respecto a A</th>
-                    <th className="px-4 py-2 font-semibold text-right">% respecto a B</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {dashboard.pares.map((p) => {
-                    const totalA = dashboard.totales.find(() => etiquetas[Number(p.tablaA.slice(-1))] === p.tablaA)?.registros ?? 1
-                    const totalB = dashboard.totales.find(() => etiquetas[Number(p.tablaB.slice(-1))] === p.tablaB)?.registros ?? 1
-                    const idxA = etiquetas.indexOf(p.tablaA)
-                    const idxB = etiquetas.indexOf(p.tablaB)
-                    return (
-                      <tr key={`${p.tablaA}-${p.tablaB}`} className="hover:bg-gray-50/50">
-                        <td className="px-4 py-2 font-medium flex items-center gap-2">
-                          <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: colores[idxA] }} />
-                          {p.tablaA}
-                        </td>
-                        <td className="px-4 py-2 font-medium flex items-center gap-2">
-                          <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: colores[idxB] }} />
-                          {p.tablaB}
-                        </td>
-                        <td className="px-4 py-2 text-right font-semibold">{p.cantidad.toLocaleString()}</td>
-                        <td className="px-4 py-2 text-right text-muted">{((p.cantidad / totalA) * 100).toFixed(1)}%</td>
-                        <td className="px-4 py-2 text-right text-muted">{((p.cantidad / totalB) * 100).toFixed(1)}%</td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <section className="card-hover lg:col-span-2">
-            <div className="card-header">
-              <h2 className="text-base font-bold">Distribución de documentos</h2>
-            </div>
-            <div className="card-body">
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                {dashboard.overlap.map((o) => {
-                  const col = o.tablas === 4 ? '#10b981' : o.tablas === 3 ? '#3b82f6' : o.tablas === 2 ? '#f59e0b' : '#6b7280'
-                  return (
-                    <div key={o.tablas} className="text-center rounded-lg border border-border p-4">
-                      <p className="text-2xl font-heading font-bold" style={{ color: col }}>{o.cantidad.toLocaleString()}</p>
-                      <p className="mt-1 text-xs text-muted">en {o.tablas} tabla{o.tablas !== 1 ? 's' : ''}</p>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          </section>
-          <section className="card-hover">
-            <div className="card-header">
-              <h2 className="text-base font-bold">Totales</h2>
-            </div>
-            <div className="flex flex-col items-center justify-center px-6 py-6 space-y-2">
-              <p className="text-4xl font-heading font-bold tracking-tight text-brand">{dashboard.totalDocumentosUnicos.toLocaleString()}</p>
-              <p className="text-sm text-muted">documentos únicos</p>
-              <div className="w-full h-px bg-border my-2" />
-              <p className="text-xl font-heading font-semibold text-foreground">{totalArchivos.toLocaleString()}</p>
-              <p className="text-sm text-muted">registros totales</p>
-              <div className="w-full h-px bg-border my-2" />
-              <p className="text-lg font-heading font-semibold text-emerald-600">{dashboard.docsEnTodas.toLocaleString()}</p>
-              <p className="text-sm text-muted">en las 4 tablas</p>
-            </div>
-          </section>
-        </div>
-
-        <div className="border-t border-border pt-6 mt-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-xl font-bold">Cuadros Estadísticos</h2>
-              <p className="text-sm text-muted">19 cuadros generados desde los datos importados.</p>
-            </div>
-            <div className="flex gap-2">
-              <button onClick={async () => {
-                setGenerandoTodos(true)
-                try {
-                  await regenerarTodosLosCuadros()
-                  await cargarCuadros()
-                } finally { setGenerandoTodos(false) }
-              }} disabled={generandoTodos} className="btn-primary text-sm">
-                {generandoTodos ? (
-                  <><span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent mr-1" /> Generando...</>
-                ) : 'Generar todos'}
-              </button>
-              <button onClick={async () => {
-                if (!confirm('¿Borrar todos los cuadros?')) return
-                await borrarTodosLosCuadros()
-                await cargarCuadros()
-              }} className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50">
-                Borrar todos
-              </button>
-            </div>
-          </div>
-
-          {cuadros.length === 0 && !generandoTodos && (
-            <div className="rounded-lg border border-dashed border-border p-8 text-center">
-              <p className="text-sm text-muted">No hay cuadros generados. Hacé clic en &ldquo;Generar todos&rdquo;.</p>
-            </div>
-          )}
-
-          {generandoTodos && (
-            <div className="flex items-center gap-3 text-sm text-muted py-4">
-              <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-brand border-t-transparent" />
-              Generando los 19 cuadros...
-            </div>
-          )}
-
-          {cuadros.length > 0 && (
-            <div className="flex gap-6 min-h-[400px]">
-              <nav className="w-64 shrink-0 overflow-y-auto border-r border-border pr-4 space-y-0.5 max-h-[600px]">
-                {cuadros.map((cq) => (
-                  <button key={cq.numero} onClick={() => setCuadroActivo(cq.numero)}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition ${
-                      cuadroActivo === cq.numero
-                        ? 'bg-brand/10 text-brand font-semibold'
-                        : 'text-muted hover:text-foreground hover:bg-gray-50'
-                    }`}
-                  >
-                    <span className="block truncate">{cq.nombre}</span>
-                    {cq.resumen && <span className="block text-xs text-muted truncate mt-0.5">{cq.resumen}</span>}
-                  </button>
-                ))}
-              </nav>
-
-              <div className="flex-1 min-w-0">
-                {(() => {
-                  const activo = cuadros.find(c => c.numero === cuadroActivo) ?? cuadros[0]
-                  if (!activo) return <p className="text-sm text-muted py-8">Seleccioná un cuadro.</p>
-
-                  return (
-                    <div>
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="min-w-0">
-                          <h3 className="text-lg font-bold text-foreground truncate">{activo.nombre}</h3>
-                          {activo.resumen && <p className="text-sm text-muted mt-0.5">{activo.resumen}</p>}
-                        </div>
-                        <div className="flex gap-2 shrink-0 ml-4">
-                          <button onClick={async () => {
-                            setGenerandoCuadros(prev => new Set(prev).add(activo.numero))
-                            try {
-                              await generarCuadro(activo.numero)
-                              await cargarCuadros()
-                            } finally {
-                              setGenerandoCuadros(prev => { const n = new Set(prev); n.delete(activo.numero); return n })
-                            }
-                          }} disabled={generandoCuadros.has(activo.numero)} className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-brand hover:bg-brand/5 transition">
-                            {generandoCuadros.has(activo.numero) ? 'Generando...' : 'Regenerar'}
-                          </button>
-                          <button onClick={async () => {
-                            await borrarCuadro(activo.numero)
-                            await cargarCuadros()
-                            if (cuadroActivo === activo.numero) setCuadroActivo(null)
-                          }} className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 transition">
-                            Borrar
-                          </button>
-                        </div>
-                      </div>
-
-                      {activo.filas.length === 0 ? (
-                        <p className="text-sm text-muted py-8">Sin datos. Generá el cuadro.</p>
-                      ) : (
-                        <div className="space-y-6">
-                          <CuadroChart cuadro={activo} />
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                              <thead>
-                                <tr className="border-b border-border text-left text-xs text-muted">
-                                  {activo.columnas.map((col, i) => (
-                                    <th key={i} className="px-3 py-2 font-semibold whitespace-nowrap">{col}</th>
-                                  ))}
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-border">
-                                {activo.filas.map((fila, fi) => (
-                                  <tr key={fi} className="hover:bg-gray-50/50 text-xs">
-                                    {fila.map((celda, ci) => (
-                                      <td key={ci} className={`px-3 py-1.5 ${ci === 0 ? 'font-medium text-foreground' : 'text-muted'} ${typeof celda === 'number' ? 'text-right font-mono' : ''}`}>
-                                        {typeof celda === 'number' ? celda.toLocaleString() : celda}
-                                      </td>
-                                    ))}
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })()}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    )
-  }
-
   function renderRelacionadas() {
     return (
       <section className="card">
@@ -737,7 +422,7 @@ export default function ArchivosPage() {
         ))}
       </nav>
 
-      {tab === 'dashboard' ? renderDashboard() : tab === 'relacionadas' ? renderRelacionadas() : (
+      {tab === 'relacionadas' ? renderRelacionadas() : (
         <>
           <div className="grid grid-cols-3 gap-4">
             <div className="card-hover"><div className="px-5 py-4">

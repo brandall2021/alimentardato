@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { obtenerConfig, guardarOpenAIKey, guardarPrompt, obtenerPrompt } from '@/actions/configuracion'
+import { vaciarAlumnos } from '@/actions/alumnos'
 import { actualizarCredenciales } from '@/actions/configuracion-actions'
 import { leerEncabezadosExcel, importarDesdeExcel } from '@/actions/importacion'
 import { CAMPOS_ALUMNO, type MapeoColumnas, type CampoAlumno } from '@/lib/campos-alumno'
@@ -16,6 +17,7 @@ export default function ConfiguracionPage() {
   const [chatbotPrompt, setChatbotPrompt] = useState('')
   const [promptMsg, setPromptMsg] = useState('')
   const [promptError, setPromptError] = useState(false)
+  const [vaciandoAlumnos, setVaciandoAlumnos] = useState(false)
 
   const [fileBase64, setFileBase64] = useState('')
   const [columnas, setColumnas] = useState<string[]>([])
@@ -329,6 +331,25 @@ export default function ConfiguracionPage() {
           <p className="text-sm text-muted">
             Seleccioná un archivo .xlsx, .xls o .csv y asigná cada columna a un campo del sistema.
           </p>
+        </div>
+        <div className="border-b border-border px-5 py-3 flex items-center justify-between">
+          <p className="text-xs text-muted">También podés vaciar la tabla de alumnos por completo.</p>
+          <button
+            onClick={async () => {
+              if (!confirm('¿Estás seguro de vaciar toda la tabla de alumnos? Esta acción no se puede deshacer.')) return
+              setVaciandoAlumnos(true)
+              try {
+                await vaciarAlumnos()
+                alert('Tabla de alumnos vaciada correctamente.')
+              } finally {
+                setVaciandoAlumnos(false)
+              }
+            }}
+            disabled={vaciandoAlumnos}
+            className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-50"
+          >
+            {vaciandoAlumnos ? 'Vaciando...' : 'Vaciar tabla alumnos'}
+          </button>
         </div>
         <div className="space-y-4 px-5 py-4">
           {paso === 'seleccionar' && (
