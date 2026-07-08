@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/auth-guard'
 import { importarExcelSchema, validarImportacionRows } from '@/lib/validations'
 import { revalidatePath } from 'next/cache'
+import { Prisma } from '@/generated/prisma/client'
 import type { MapeoColumnas, CampoAlumno } from '@/lib/campos-alumno'
 
 type TipoDocumento = 'DNI' | 'LE' | 'LC' | 'PASAPORTE'
@@ -53,56 +54,6 @@ function parseDate(val: unknown): Date | null {
   }
 
   return null
-}
-
-const ALIASES: Record<string, CampoAlumno> = {
-  'apellido y nombre': 'apellidoNombre',
-  'apellido_nombre': 'apellidoNombre',
-  'nombre_completo': 'apellidoNombre',
-  'tipo documento': 'tipoDocumento',
-  'tipo_documento': 'tipoDocumento',
-  'tipo_doc': 'tipoDocumento',
-  'n° documento': 'numeroDocumento',
-  'nro documento': 'numeroDocumento',
-  'numero_documento': 'numeroDocumento',
-  'nro_documento': 'numeroDocumento',
-  'documento': 'numeroDocumento',
-  'fecha de nacimiento': 'fechaNacimiento',
-  'fecha_nacimiento': 'fechaNacimiento',
-  'fecha_nac': 'fechaNacimiento',
-  'email': 'email',
-  'teléfono': 'telefono',
-  'telefono': 'telefono',
-  'celular': 'telefono',
-  'legajo': 'legajo',
-  'plan': 'plan',
-  'año ingreso': 'anoIngreso',
-  'ano ingreso': 'anoIngreso',
-  'ano_ingreso': 'anoIngreso',
-  'anio_ingreso': 'anoIngreso',
-  'fecha ingreso': 'fechaIngreso',
-  'fecha_ingreso': 'fechaIngreso',
-  'último examen': 'ultimoExamen',
-  'ultimo_examen': 'ultimoExamen',
-  'última reinscripción': 'ultimaReinscripcion',
-  'ultima_reinscripcion': 'ultimaReinscripcion',
-  'prom. con aplazos': 'promConAplazos',
-  'prom_con_aplazos': 'promConAplazos',
-  'prom. sin aplazos': 'promSinAplazos',
-  'prom_sin_aplazos': 'promSinAplazos',
-  'actividades aprobadas': 'actividadesAprobadas',
-  'actividades_aprobadas': 'actividadesAprobadas',
-  'total actividades': 'totalActividades',
-  'total_actividades': 'totalActividades',
-  'estado inscripción': 'estadoInscripcion',
-  'estado_inscripcion': 'estadoInscripcion',
-  'país de origen': 'paisOrigen',
-  'pais_origen': 'paisOrigen',
-}
-
-function detectarCampo(columna: string): CampoAlumno | null {
-  const key = columna.toLowerCase().trim().replace(/\s+/g, ' ')
-  return ALIASES[key] ?? null
 }
 
 export interface ResultadoImportacion {
@@ -245,8 +196,8 @@ export async function importarDesdeExcel(
             numeroDocumento,
           },
         },
-        create: data as never,
-        update: data as never,
+        create: data as Prisma.AlumnoCreateInput,
+        update: data as Prisma.AlumnoUpdateInput,
       })
 
       resultados.push({ fila, exito: true })

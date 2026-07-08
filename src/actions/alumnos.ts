@@ -74,67 +74,65 @@ export async function buscarPorValores(valoresRaw: string): Promise<ResultadoBus
     .filter(Boolean)
 
   const resultados: ResultadoBusqueda[] = []
+  const desconocidos = valores.filter((v) => detectarTipo(v) === 'desconocido')
+  const buscables = valores.filter((v) => detectarTipo(v) !== 'desconocido')
 
-  for (const valor of valores) {
+  for (const v of desconocidos) {
+    resultados.push({
+      id: '', valor: v, tipo: 'desconocido',
+      apellidoNombre: null, email: null, telefono: null, encontrado: false,
+    })
+  }
+
+  const emails = buscables.filter((v) => detectarTipo(v) === 'email')
+  const docs = buscables.filter((v) => detectarTipo(v) === 'documento')
+  const legajos = buscables.filter((v) => detectarTipo(v) === 'legajo')
+
+  const selectFields = { id: true, apellidoNombre: true, email: true, telefono: true, numeroDocumento: true, legajo: true, tipoDocumento: true } as const
+
+  type AlumnoRow = { id: string; apellidoNombre: string; email: string | null; telefono: string | null; numeroDocumento: string; legajo: string | null; tipoDocumento: 'DNI' | 'LE' | 'LC' | 'PASAPORTE' }
+
+  const [byEmail, byDoc, byLegajo] = await Promise.all([
+    emails.length > 0
+      ? prisma.alumno.findMany({ where: { email: { in: emails, mode: 'insensitive' } }, select: selectFields }) as Promise<AlumnoRow[]>
+      : Promise.resolve([] as AlumnoRow[]),
+    docs.length > 0
+      ? prisma.alumno.findMany({ where: { numeroDocumento: { in: docs, mode: 'insensitive' } }, select: selectFields }) as Promise<AlumnoRow[]>
+      : Promise.resolve([] as AlumnoRow[]),
+    legajos.length > 0
+      ? prisma.alumno.findMany({ where: { legajo: { in: legajos, mode: 'insensitive' } }, select: selectFields }) as Promise<AlumnoRow[]>
+      : Promise.resolve([] as AlumnoRow[]),
+  ])
+
+  const encontrados = new Map<string, typeof byEmail[0]>()
+  for (const a of [...byEmail, ...byDoc, ...byLegajo]) {
+    const key = `${a.tipoDocumento}:${a.numeroDocumento}`
+    if (!encontrados.has(key)) encontrados.set(key, a)
+  }
+
+  for (const valor of buscables) {
     const tipo = detectarTipo(valor)
-
-    if (tipo === 'desconocido') {
-      resultados.push({
-        id: '',
-        valor,
-        tipo: 'desconocido',
-        apellidoNombre: null,
-        email: null,
-        telefono: null,
-        encontrado: false,
-      })
-      continue
-    }
-
-    let where: Prisma.AlumnoWhereInput
+    let match: typeof byEmail[0] | undefined
 
     if (tipo === 'email') {
-      where = { email: { equals: valor, mode: 'insensitive' } }
+      match = byEmail.find((a) => a.email?.toLowerCase() === valor.toLowerCase())
     } else if (tipo === 'documento') {
-      where = { numeroDocumento: { equals: valor, mode: 'insensitive' } }
+      match = byDoc.find((a) => a.numeroDocumento.toLowerCase() === valor.toLowerCase())
     } else {
-      where = { legajo: { equals: valor, mode: 'insensitive' } }
+      match = byLegajo.find((a) => a.legajo?.toLowerCase() === valor.toLowerCase())
     }
 
-    const alumnos = await prisma.alumno.findMany({
-      where,
-      select: {
-        id: true,
-        apellidoNombre: true,
-        email: true,
-        telefono: true,
-        numeroDocumento: true,
-        legajo: true,
-      },
-    })
-
-    if (alumnos.length === 0) {
+    if (match) {
       resultados.push({
-        id: '',
-        valor,
-        tipo,
-        apellidoNombre: null,
-        email: null,
-        telefono: null,
-        encontrado: false,
+        id: match.id, valor, tipo,
+        apellidoNombre: match.apellidoNombre, email: match.email, telefono: match.telefono,
+        encontrado: true,
       })
     } else {
-      for (const a of alumnos) {
-        resultados.push({
-          id: a.id,
-          valor,
-          tipo,
-          apellidoNombre: a.apellidoNombre,
-          email: a.email,
-          telefono: a.telefono,
-          encontrado: true,
-        })
-      }
+      resultados.push({
+        id: '', valor, tipo,
+        apellidoNombre: null, email: null, telefono: null, encontrado: false,
+      })
     }
   }
 

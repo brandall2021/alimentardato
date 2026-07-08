@@ -2,9 +2,17 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
 
-export async function GET() {
+async function checkAuth() {
   const session = await auth()
   if (!session?.user?.id) {
+    return null
+  }
+  return session
+}
+
+export async function GET() {
+  const session = await checkAuth()
+  if (!session) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
 
@@ -20,8 +28,8 @@ export async function GET() {
 }
 
 export async function PATCH(req: Request) {
-  const session = await auth()
-  if (!session?.user?.id) {
+  const session = await checkAuth()
+  if (!session) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
 

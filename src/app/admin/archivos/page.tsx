@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts'
 import {
   parsearArchivo0, parsearArchivo1, parsearArchivo2, parsearArchivo3,
@@ -26,7 +26,7 @@ const TABS: { key: TabId; label: string }[] = [
 ]
 
 type ArchivoParser = {
-  parse: (b64: string) => Promise<any>
+  parse: (b64: string) => Promise<{ lineas: (LineaA0 | LineaA1 | LineaA2 | LineaA3)[]; total: number; validas: number; errores: number }>
   campos: number
   descripcion: string
 }
@@ -38,7 +38,7 @@ const ARCHIVOS: Record<ArchivoKey, ArchivoParser> = {
   archivo3: { parse: parsearArchivo3, campos: 17, descripcion: 'Materias regularizadas (17 campos)' },
 }
 
-type ImportFn = (base64: string) => Promise<any>
+type ImportFn = (base64: string) => Promise<{ importados: number; errores: number; detalles: { fila: number; exito: boolean; error?: string }[] }>
 
 const IMPORT_FNS: Record<ArchivoKey, ImportFn> = {
   archivo0: importarArchivo0,
@@ -143,11 +143,11 @@ export default function ArchivosPage() {
   const [tab, setTab] = useState<TabId>('dashboard')
   const [dashboard, setDashboard] = useState<DashboardArchivos | null>(null)
   const [fileBase64, setFileBase64] = useState('')
-  const [lineas, setLineas] = useState<any[]>([])
+  const [lineas, setLineas] = useState<(LineaA0 | LineaA1 | LineaA2 | LineaA3)[]>([])
   const [paso, setPaso] = useState<'seleccionar' | 'preview' | 'importando' | 'resultado'>('seleccionar')
   const [mensaje, setMensaje] = useState('')
   const [resumen, setResumen] = useState({ importados: 0, errores: 0, total: 0 })
-  const [datosArchivo, setDatosArchivo] = useState<{ total: number; importaciones: number; ultimaImportacion: any } | null>(null)
+  const [datosArchivo, setDatosArchivo] = useState<{ total: number; importaciones: number; ultimaImportacion: { fecha: Date; filas: number; importados: number; errores: number } | null } | null>(null)
   const [detallesError, setDetallesError] = useState<{ fila: number; error: string }[]>([])
   const [confirmarVaciar, setConfirmarVaciar] = useState(false)
   const [vaciando, setVaciando] = useState(false)
@@ -187,7 +187,15 @@ export default function ArchivosPage() {
     catch { setDashboard(null) }
   }, [])
 
-  useEffect(() => { cargarDashboard(); cargarCuadros() }, [cargarDashboard, cargarCuadros])
+  useEffect(() => {
+    const init = async () => {
+      const [dash, cuadros] = await Promise.all([obtenerDashboardArchivos(), listarCuadros()])
+      setDashboard(dash)
+      setCuadros(cuadros)
+      if (cuadros.length > 0) setCuadroActivo(cuadros[0].numero)
+    }
+    init().catch(() => {})
+  }, [])
 
   const handleCambiarTab = useCallback((t: TabId) => {
     setTab(t)
@@ -227,7 +235,7 @@ export default function ArchivosPage() {
       const fn = IMPORT_FNS[archivoActual]
       const res = await fn(fileBase64)
       setResumen({ importados: res.importados, errores: res.errores, total: res.importados + res.errores })
-      const errs = res.detalles.filter((d: any) => !d.exito).map((d: any) => ({ fila: d.fila, error: d.error ?? '' }))
+      const errs = res.detalles.filter((d) => !d.exito).map((d) => ({ fila: d.fila, error: d.error ?? '' }))
       setDetallesError(errs)
       setMensaje(res.errores > 0
         ? `Importación completada: ${res.importados} importados, ${res.errores} errores.`
@@ -271,8 +279,8 @@ export default function ArchivosPage() {
     } finally { setBuscandoRel(false) }
   }, [docBusqueda])
 
-  const validas = lineas.filter((l: any) => l.valida).length
-  const invalidas = lineas.filter((l: any) => !l.valida).length
+  const validas = lineas.filter((l) => l.valida).length
+  const invalidas = lineas.filter((l) => !l.valida).length
 
   function renderPreview() {
     const preview = lineas.slice(0, 20)
@@ -289,7 +297,7 @@ export default function ArchivosPage() {
               <th className="px-3 py-2 font-semibold">Fecha Nac.</th>
             </tr></thead>
             <tbody className="divide-y divide-border">
-              {preview.map((l: LineaA0) => l.valida && l.datos ? renderA0(l) : (
+              {preview.map((l) => (l as LineaA0).valida && (l as LineaA0).datos ? renderA0(l as LineaA0) : (
                 <tr key={l.fila}><td colSpan={5} className="px-3 py-1.5 text-xs text-red-500">{l.fila}: {l.error}</td></tr>
               ))}
             </tbody>
@@ -306,7 +314,7 @@ export default function ArchivosPage() {
               {COLUMNAS_A1.map((c) => <th key={c} className="px-3 py-2 font-semibold whitespace-nowrap">{c}</th>)}
             </tr></thead>
             <tbody className="divide-y divide-border">
-              {preview.map((l: LineaA1) => l.valida && l.datos ? renderA1(l) : (
+              {preview.map((l) => (l as LineaA1).valida && (l as LineaA1).datos ? renderA1(l as LineaA1) : (
                 <tr key={l.fila}><td colSpan={12} className="px-3 py-1.5 text-xs text-red-500">{l.fila}: {l.error}</td></tr>
               ))}
             </tbody>
@@ -323,7 +331,7 @@ export default function ArchivosPage() {
               {COLUMNAS_A2.map((c) => <th key={c} className="px-3 py-2 font-semibold whitespace-nowrap">{c}</th>)}
             </tr></thead>
             <tbody className="divide-y divide-border">
-              {preview.map((l: LineaA2) => l.valida && l.datos ? renderA2(l) : (
+              {preview.map((l) => (l as LineaA2).valida && (l as LineaA2).datos ? renderA2(l as LineaA2) : (
                 <tr key={l.fila}><td colSpan={18} className="px-3 py-1.5 text-xs text-red-500">{l.fila}: {l.error}</td></tr>
               ))}
             </tbody>
@@ -340,7 +348,7 @@ export default function ArchivosPage() {
               {COLUMNAS_A3.map((c) => <th key={c} className="px-3 py-2 font-semibold whitespace-nowrap">{c}</th>)}
             </tr></thead>
             <tbody className="divide-y divide-border">
-              {preview.map((l: LineaA3) => l.valida && l.datos ? renderA3(l) : (
+              {preview.map((l) => (l as LineaA3).valida && (l as LineaA3).datos ? renderA3(l as LineaA3) : (
                 <tr key={l.fila}><td colSpan={17} className="px-3 py-1.5 text-xs text-red-500">{l.fila}: {l.error}</td></tr>
               ))}
             </tbody>
@@ -460,8 +468,8 @@ export default function ArchivosPage() {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {dashboard.pares.map((p) => {
-                    const totalA = dashboard.totales.find((t) => etiquetas[Number(p.tablaA.slice(-1))] === p.tablaA)?.registros ?? 1
-                    const totalB = dashboard.totales.find((t) => etiquetas[Number(p.tablaB.slice(-1))] === p.tablaB)?.registros ?? 1
+                    const totalA = dashboard.totales.find(() => etiquetas[Number(p.tablaA.slice(-1))] === p.tablaA)?.registros ?? 1
+                    const totalB = dashboard.totales.find(() => etiquetas[Number(p.tablaB.slice(-1))] === p.tablaB)?.registros ?? 1
                     const idxA = etiquetas.indexOf(p.tablaA)
                     const idxB = etiquetas.indexOf(p.tablaB)
                     return (
@@ -552,7 +560,7 @@ export default function ArchivosPage() {
 
           {cuadros.length === 0 && !generandoTodos && (
             <div className="rounded-lg border border-dashed border-border p-8 text-center">
-              <p className="text-sm text-muted">No hay cuadros generados. Hacé clic en "Generar todos".</p>
+              <p className="text-sm text-muted">No hay cuadros generados. Hacé clic en &ldquo;Generar todos&rdquo;.</p>
             </div>
           )}
 
@@ -802,7 +810,7 @@ export default function ArchivosPage() {
                     <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
                       <span className="font-semibold">Líneas con errores:</span>
                       <ul className="mt-1 list-inside list-disc space-y-0.5">
-                        {lineas.filter((l: any) => !l.valida).slice(0, 10).map((l: any) => (
+                        {lineas.filter((l) => !l.valida).slice(0, 10).map((l) => (
                           <li key={l.fila}><strong>Fila {l.fila}:</strong> {l.error}</li>
                         ))}
                         {invalidas > 10 && <li className="text-amber-600">...y {invalidas - 10} más</li>}

@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { obtenerConfig, guardarConfig } from '@/actions/configuracion'
+import { obtenerConfig } from '@/actions/configuracion'
+import { actualizarCredenciales } from '@/actions/configuracion-actions'
 import { leerEncabezadosExcel, importarDesdeExcel } from '@/actions/importacion'
 import { CAMPOS_ALUMNO, type MapeoColumnas, type CampoAlumno } from '@/lib/campos-alumno'
 
@@ -157,14 +158,7 @@ export default function ConfiguracionPage() {
           </p>
         </div>
         <form
-          action={async (formData: FormData) => {
-            await guardarConfig('dev_email', (formData.get('email') as string) ?? '')
-            const pass = (formData.get('password') as string) ?? ''
-            if (pass) {
-              await guardarConfig('dev_password', pass)
-              await guardarConfig('dev_password_set', 'true')
-            }
-          }}
+          action={actualizarCredenciales}
           className="card-body space-y-4"
         >
           <div>

@@ -1,11 +1,10 @@
 'use client'
 
 import { useState, Suspense } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
 function ResetForm() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const token = searchParams.get('token') || ''
 

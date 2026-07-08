@@ -66,7 +66,6 @@ export default async function AdminDashboard() {
   const conEmailPct = data.totalAlumnos > 0 ? (data.conEmail / data.totalAlumnos) * 100 : 0
   const conTelPct = data.totalAlumnos > 0 ? (data.conTelefono / data.totalAlumnos) * 100 : 0
   const conLegajoPct = data.totalAlumnos > 0 ? (data.conLegajo / data.totalAlumnos) * 100 : 0
-  const conPaisPct = data.totalAlumnos > 0 ? (data.conPais / data.totalAlumnos) * 100 : 0
   const planMax = Math.max(...data.porPlan.map((p) => p._count.id), 1)
 
   return (
@@ -364,29 +363,33 @@ function LineChart({ data }: { data: { label: string; value: number }[] }) {
 function DonutChart({ data }: { data: { label: string; value: number; color: string }[] }) {
   const total = data.reduce((s, d) => s + d.value, 0)
   const r = 50; const circ = 2 * Math.PI * r
-  let offset = 0
+
+  const circles = data.reduce<{ el: React.ReactNode; len: number }[]>((acc, d) => {
+    const offset = acc.reduce((s, a) => s + a.len, 0)
+    const pct = total > 0 ? d.value / total : 0
+    const len = pct * circ
+    acc.push({
+      len,
+      el: (
+        <circle
+          key={d.label}
+          cx="60" cy="60" r={r}
+          fill="none"
+          stroke={d.color}
+          strokeWidth="20"
+          strokeDasharray={`${len} ${circ - len}`}
+          strokeDashoffset={-offset}
+          transform="rotate(-90 60 60)"
+          className="transition-all"
+        />
+      ),
+    })
+    return acc
+  }, [])
 
   return (
     <svg width="120" height="120" viewBox="0 0 120 120">
-      {data.map((d) => {
-        const pct = total > 0 ? d.value / total : 0
-        const len = pct * circ
-        const seg = (
-          <circle
-            key={d.label}
-            cx="60" cy="60" r={r}
-            fill="none"
-            stroke={d.color}
-            strokeWidth="20"
-            strokeDasharray={`${len} ${circ - len}`}
-            strokeDashoffset={-offset}
-            transform="rotate(-90 60 60)"
-            className="transition-all"
-          />
-        )
-        offset += len
-        return seg
-      })}
+      {circles.map((c) => c.el)}
       <text x="60" y="56" textAnchor="middle" className="fill-foreground text-lg font-heading font-bold">
         {total}
       </text>

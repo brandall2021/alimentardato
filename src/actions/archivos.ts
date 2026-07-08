@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/auth-guard'
 import { revalidatePath } from 'next/cache'
+import { parseDateAAAAMMDD, limpiarString, parseNumero, parseSN } from '@/lib/parse-utils'
 
 export type ArchivoKey = 'archivo0' | 'archivo1' | 'archivo2' | 'archivo3'
 
@@ -11,31 +12,6 @@ const ARCHIVO_PATHS: Record<ArchivoKey, string> = {
   archivo1: '/admin/archivos',
   archivo2: '/admin/archivos',
   archivo3: '/admin/archivos',
-}
-
-function parseDateAAAAMMDD(val: string): Date | null {
-  val = val.trim()
-  if (!val || val.length !== 8) return null
-  const m = val.match(/^(\d{4})(\d{2})(\d{2})$/)
-  if (!m) return null
-  const d = new Date(+m[1], +m[2] - 1, +m[3])
-  return isNaN(d.getTime()) ? null : d
-}
-
-function limpiarString(val: string): string {
-  return val.trim()
-}
-
-function parseNumero(val: string): number | null {
-  const s = val.trim()
-  if (!s) return null
-  const n = Number(s)
-  return isNaN(n) ? null : n
-}
-
-function parseSN(val: string): string {
-  const s = val.trim().toUpperCase()
-  return s === 'S' ? 'S' : 'N'
 }
 
 // ─── Archivo 0 (28 campos, datos personales) ───
@@ -570,12 +546,28 @@ async function importarRegistros<T>(
   return { importados: ok, errores: err, detalles, importacionId: importacion.id }
 }
 
+function createRegistro0(id: string, d: NonNullable<LineaA0['datos']>) {
+  return prisma.archivo0Registro.create({ data: { importacionId: id, ...d } })
+}
+
+function createRegistro1(id: string, d: NonNullable<LineaA1['datos']>) {
+  return prisma.archivo1Registro.create({ data: { importacionId: id, ...d } })
+}
+
+function createRegistro2(id: string, d: NonNullable<LineaA2['datos']>) {
+  return prisma.archivo2Registro.create({ data: { importacionId: id, ...d } })
+}
+
+function createRegistro3(id: string, d: NonNullable<LineaA3['datos']>) {
+  return prisma.archivo3Registro.create({ data: { importacionId: id, ...d } })
+}
+
 export async function importarArchivo0(base64: string) {
   return importarRegistros(
     'archivo0',
     base64,
     (b) => parsearArchivo0(b),
-    (id, d) => prisma.archivo0Registro.create({ data: { ...d as any, importacionId: id } }),
+    createRegistro0,
     (fn, fl) => prisma.archivo0Importacion.create({ data: { filename: fn, filas: fl } }),
     (id, imp, err) => prisma.archivo0Importacion.update({ where: { id }, data: { importados: imp, errores: err } }),
   )
@@ -586,7 +578,7 @@ export async function importarArchivo1(base64: string) {
     'archivo1',
     base64,
     (b) => parsearArchivo1(b),
-    (id, d) => prisma.archivo1Registro.create({ data: { ...d as any, importacionId: id } }),
+    createRegistro1,
     (fn, fl) => prisma.archivo1Importacion.create({ data: { filename: fn, filas: fl } }),
     (id, imp, err) => prisma.archivo1Importacion.update({ where: { id }, data: { importados: imp, errores: err } }),
   )
@@ -597,7 +589,7 @@ export async function importarArchivo2(base64: string) {
     'archivo2',
     base64,
     (b) => parsearArchivo2(b),
-    (id, d) => prisma.archivo2Registro.create({ data: { ...d as any, importacionId: id } }),
+    createRegistro2,
     (fn, fl) => prisma.archivo2Importacion.create({ data: { filename: fn, filas: fl } }),
     (id, imp, err) => prisma.archivo2Importacion.update({ where: { id }, data: { importados: imp, errores: err } }),
   )
@@ -608,7 +600,7 @@ export async function importarArchivo3(base64: string) {
     'archivo3',
     base64,
     (b) => parsearArchivo3(b),
-    (id, d) => prisma.archivo3Registro.create({ data: { ...d as any, importacionId: id } }),
+    createRegistro3,
     (fn, fl) => prisma.archivo3Importacion.create({ data: { filename: fn, filas: fl } }),
     (id, imp, err) => prisma.archivo3Importacion.update({ where: { id }, data: { importados: imp, errores: err } }),
   )
@@ -689,37 +681,37 @@ export async function obtenerResumenArchivo(archivo: ArchivoKey): Promise<{
 
   let total: number
   let importaciones: number
-  let ultima: unknown
+  let ultimaImportacion: { createdAt: Date; filas: number; importados: number; errores: number } | null = null
 
   switch (archivo) {
     case 'archivo0':
       total = await prisma.archivo0Registro.count()
       importaciones = await prisma.archivo0Importacion.count()
-      ultima = await prisma.archivo0Importacion.findFirst({ orderBy: { createdAt: 'desc' } })
+      ultimaImportacion = await prisma.archivo0Importacion.findFirst({ orderBy: { createdAt: 'desc' } })
       break
     case 'archivo1':
       total = await prisma.archivo1Registro.count()
       importaciones = await prisma.archivo1Importacion.count()
-      ultima = await prisma.archivo1Importacion.findFirst({ orderBy: { createdAt: 'desc' } })
+      ultimaImportacion = await prisma.archivo1Importacion.findFirst({ orderBy: { createdAt: 'desc' } })
       break
     case 'archivo2':
       total = await prisma.archivo2Registro.count()
       importaciones = await prisma.archivo2Importacion.count()
-      ultima = await prisma.archivo2Importacion.findFirst({ orderBy: { createdAt: 'desc' } })
+      ultimaImportacion = await prisma.archivo2Importacion.findFirst({ orderBy: { createdAt: 'desc' } })
       break
     case 'archivo3':
       total = await prisma.archivo3Registro.count()
       importaciones = await prisma.archivo3Importacion.count()
-      ultima = await prisma.archivo3Importacion.findFirst({ orderBy: { createdAt: 'desc' } })
+      ultimaImportacion = await prisma.archivo3Importacion.findFirst({ orderBy: { createdAt: 'desc' } })
       break
   }
-
-  const u = ultima as { createdAt: Date; filas: number; importados: number; errores: number } | null
 
   return {
     total,
     importaciones,
-    ultimaImportacion: u ? { fecha: u.createdAt, filas: u.filas, importados: u.importados, errores: u.errores } : null,
+    ultimaImportacion: ultimaImportacion
+      ? { fecha: ultimaImportacion.createdAt, filas: ultimaImportacion.filas, importados: ultimaImportacion.importados, errores: ultimaImportacion.errores }
+      : null,
   }
 }
 
@@ -803,20 +795,24 @@ export async function obtenerDashboardArchivos(): Promise<DashboardArchivos> {
   const docsEnTodas = overlap.find((o) => o.tablas === 4)?.cantidad ?? 0
 
   const pares: ParIntersec[] = []
-  const combos = [
-    ['Archivo 0', 'Archivo 1', '"Archivo0Registro"', '"Archivo1Registro"'],
-    ['Archivo 0', 'Archivo 2', '"Archivo0Registro"', '"Archivo2Registro"'],
-    ['Archivo 0', 'Archivo 3', '"Archivo0Registro"', '"Archivo3Registro"'],
-    ['Archivo 1', 'Archivo 2', '"Archivo1Registro"', '"Archivo2Registro"'],
-    ['Archivo 1', 'Archivo 3', '"Archivo1Registro"', '"Archivo3Registro"'],
-    ['Archivo 2', 'Archivo 3', '"Archivo2Registro"', '"Archivo3Registro"'],
+  const paresData = await Promise.all([
+    prisma.$queryRaw<{ cnt: bigint }[]>`SELECT COUNT(*)::bigint AS cnt FROM "Archivo0Registro" x INNER JOIN "Archivo1Registro" y ON x."numeroDocumento" = y."numeroDocumento"`,
+    prisma.$queryRaw<{ cnt: bigint }[]>`SELECT COUNT(*)::bigint AS cnt FROM "Archivo0Registro" x INNER JOIN "Archivo2Registro" y ON x."numeroDocumento" = y."numeroDocumento"`,
+    prisma.$queryRaw<{ cnt: bigint }[]>`SELECT COUNT(*)::bigint AS cnt FROM "Archivo0Registro" x INNER JOIN "Archivo3Registro" y ON x."numeroDocumento" = y."numeroDocumento"`,
+    prisma.$queryRaw<{ cnt: bigint }[]>`SELECT COUNT(*)::bigint AS cnt FROM "Archivo1Registro" x INNER JOIN "Archivo2Registro" y ON x."numeroDocumento" = y."numeroDocumento"`,
+    prisma.$queryRaw<{ cnt: bigint }[]>`SELECT COUNT(*)::bigint AS cnt FROM "Archivo1Registro" x INNER JOIN "Archivo3Registro" y ON x."numeroDocumento" = y."numeroDocumento"`,
+    prisma.$queryRaw<{ cnt: bigint }[]>`SELECT COUNT(*)::bigint AS cnt FROM "Archivo2Registro" x INNER JOIN "Archivo3Registro" y ON x."numeroDocumento" = y."numeroDocumento"`,
+  ])
+  const paresLabels = [
+    ['Archivo 0', 'Archivo 1'],
+    ['Archivo 0', 'Archivo 2'],
+    ['Archivo 0', 'Archivo 3'],
+    ['Archivo 1', 'Archivo 2'],
+    ['Archivo 1', 'Archivo 3'],
+    ['Archivo 2', 'Archivo 3'],
   ]
-
-  for (const [a, b, ta, tb] of combos) {
-    const res = await prisma.$queryRawUnsafe<{ cnt: bigint }[]>(
-      `SELECT COUNT(*)::bigint AS cnt FROM ${ta} x INNER JOIN ${tb} y ON x."numeroDocumento" = y."numeroDocumento"`,
-    )
-    pares.push({ tablaA: a as string, tablaB: b as string, cantidad: Number(res[0].cnt) })
+  for (let i = 0; i < paresData.length; i++) {
+    pares.push({ tablaA: paresLabels[i][0], tablaB: paresLabels[i][1], cantidad: Number(paresData[i][0].cnt) })
   }
 
   return { totales, overlap, pares, docsEnTodas, totalDocumentosUnicos }
@@ -993,13 +989,14 @@ async function computeCuadro(numero: number): Promise<CuadroData> {
     }
 
     case 8: {
-      const raw = await prisma.$queryRaw<{ edad: string; unidadAcademica: number; codigoTitulo: number; genero: number; cantidad: bigint }[]>`
+      type RawRow = { numeroDocumento: string; fechaNacimiento: Date; unidadAcademica: number; codigoTitulo: number; genero: number }
+      const raw = await prisma.$queryRaw<RawRow[]>`
         SELECT DISTINCT a0."numeroDocumento", a0."fechaNacimiento", a1."unidadAcademica", a1."codigoTitulo", a0."genero"
         FROM "Archivo0Registro" a0
         INNER JOIN "Archivo1Registro" a1 ON a0."numeroDocumento" = a1."numeroDocumento"
       `
       const agrupado = new Map<string, number>()
-      for (const r of raw as any[]) {
+      for (const r of raw) {
         const key = `${rangoEdad(new Date(r.fechaNacimiento))}|${r.unidadAcademica}|${r.codigoTitulo}|${r.genero}`
         agrupado.set(key, (agrupado.get(key) || 0) + 1)
       }
@@ -1015,7 +1012,7 @@ async function computeCuadro(numero: number): Promise<CuadroData> {
     }
 
     case 9: {
-      const raw = await prisma.$queryRaw<any[]>`
+      const raw = await prisma.$queryRaw<{ numeroDocumento: string; fechaNacimiento: Date; unidadAcademica: number; codigoTitulo: number; genero: number }[]>`
         SELECT DISTINCT a0."numeroDocumento", a0."fechaNacimiento", a1."unidadAcademica", a1."codigoTitulo", a0."genero"
         FROM "Archivo0Registro" a0
         INNER JOIN "Archivo1Registro" a1 ON a0."numeroDocumento" = a1."numeroDocumento"
@@ -1038,7 +1035,7 @@ async function computeCuadro(numero: number): Promise<CuadroData> {
     }
 
     case 10: {
-      const raw = await prisma.$queryRaw<any[]>`
+      const raw = await prisma.$queryRaw<{ numeroDocumento: string; fechaNacimiento: Date; unidadAcademica: number; codigoTitulo: number; genero: number }[]>`
         SELECT DISTINCT a0."numeroDocumento", a0."fechaNacimiento", a1."unidadAcademica", a1."codigoTitulo", a0."genero"
         FROM "Archivo0Registro" a0
         INNER JOIN "Archivo1Registro" a1 ON a0."numeroDocumento" = a1."numeroDocumento"
@@ -1075,7 +1072,7 @@ async function computeCuadro(numero: number): Promise<CuadroData> {
     }
 
     case 12: {
-      const raw = await prisma.$queryRaw<any[]>`
+      const raw = await prisma.$queryRaw<{ numeroDocumento: string; fechaNacimiento: Date; codigoTitulo: number; genero: number }[]>`
         SELECT DISTINCT a0."numeroDocumento", a0."fechaNacimiento", a1."codigoTitulo", a0."genero"
         FROM "Archivo0Registro" a0
         INNER JOIN "Archivo1Registro" a1 ON a0."numeroDocumento" = a1."numeroDocumento"
