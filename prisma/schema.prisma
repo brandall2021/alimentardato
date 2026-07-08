@@ -53,7 +53,6 @@ model User {
   accounts      Account[]
   sessions      Session[]
   notificaciones Notification[]
-  chatSessions  ChatSession[]
 }
 
 model VerificationToken {
@@ -379,7 +378,6 @@ model ChatSession {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   messages  ChatMessage[]
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([updatedAt])
