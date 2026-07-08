@@ -175,6 +175,7 @@ export async function importarDesdeExcel(
         ['actividadesAprobadas', () => limpiarNumero(mapeo ? resolver('actividadesAprobadas') : row['Actividades Aprobadas'] ?? row['actividades_aprobadas'])],
         ['totalActividades', () => limpiarNumero(mapeo ? resolver('totalActividades') : row['Total Actividades'] ?? row['total_actividades'])],
         ['estadoInscripcion', () => limpiarString(mapeo ? resolver('estadoInscripcion') : row['Estado inscripción'] ?? row['estado_inscripcion'])],
+        ['carrera', () => limpiarString(mapeo ? resolver('carrera') : row['Carrera'] ?? row['carrera'])],
         ['paisOrigen', () => limpiarString(mapeo ? resolver('paisOrigen') : row['País de Origen'] ?? row['pais_origen'])],
       ]
 

@@ -94,6 +94,7 @@ export default function ConfiguracionPage() {
         'total_actividades': 'totalActividades',
         'estado inscripción': 'estadoInscripcion',
         'estado_inscripcion': 'estadoInscripcion',
+        'carrera': 'carrera',
         'país de origen': 'paisOrigen',
         'pais_origen': 'paisOrigen',
       }

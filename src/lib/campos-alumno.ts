@@ -16,6 +16,7 @@ export type CampoAlumno =
   | 'actividadesAprobadas'
   | 'totalActividades'
   | 'estadoInscripcion'
+  | 'carrera'
   | 'paisOrigen'
 
 export const CAMPOS_ALUMNO: { value: CampoAlumno; label: string; required?: boolean }[] = [
@@ -36,6 +37,7 @@ export const CAMPOS_ALUMNO: { value: CampoAlumno; label: string; required?: bool
   { value: 'actividadesAprobadas', label: 'Actividades Aprobadas' },
   { value: 'totalActividades', label: 'Total Actividades' },
   { value: 'estadoInscripcion', label: 'Estado inscripción' },
+  { value: 'carrera', label: 'Carrera' },
   { value: 'paisOrigen', label: 'País de Origen' },
 ]
 

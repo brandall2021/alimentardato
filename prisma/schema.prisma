@@ -102,6 +102,7 @@ model Alumno {
   actividadesAprobadas Int?
   totalActividades    Int?
   estadoInscripcion   String?
+  carrera             String?
   paisOrigen          String?
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
