@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/auth-guard'
 import bcrypt from 'bcryptjs'
 
-const CLAVES_SENSIBLES = ['dev_password', 'openai_api_key']
+const CLAVES_SENSIBLES = ['dev_password', 'openai_api_key', 'chatbot_prompt']
 
 export async function obtenerConfig() {
   await requireAdmin()
@@ -53,5 +53,25 @@ export async function guardarOpenAIKey(key: string) {
     where: { clave: 'openai_api_key_set' },
     create: { clave: 'openai_api_key_set', valor: 'true' },
     update: { valor: 'true' },
+  })
+}
+
+export async function obtenerPrompt() {
+  try {
+    const row = await prisma.configuracion.findUnique({
+      where: { clave: 'chatbot_prompt' },
+    })
+    return row?.valor ?? null
+  } catch {
+    return null
+  }
+}
+
+export async function guardarPrompt(prompt: string) {
+  await requireAdmin()
+  await prisma.configuracion.upsert({
+    where: { clave: 'chatbot_prompt' },
+    create: { clave: 'chatbot_prompt', valor: prompt },
+    update: { valor: prompt },
   })
 }

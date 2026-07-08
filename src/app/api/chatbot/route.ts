@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { Pool } from 'pg'
 import { getCachedSchema } from '@/lib/db-schema'
-import { obtenerOpenAIKey } from '@/actions/configuracion'
+import { obtenerOpenAIKey, obtenerPrompt } from '@/actions/configuracion'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
@@ -85,8 +85,9 @@ export async function POST(req: Request) {
   }
 
   const schema = await getCachedSchema()
+  const customPrompt = await obtenerPrompt()
 
-  const systemPrompt = `Eres un asistente de base de datos del sistema Alimentar Dato de FACET-UNT.
+  const basePrompt = `Eres un asistente de base de datos del sistema Alimentar Dato de FACET-UNT.
 Tu función es traducir preguntas en lenguaje natural a consultas SQL y mostrar los resultados.
 
 Esquema de la base de datos:
@@ -102,6 +103,10 @@ REGLAS:
 7. Respondé SIEMPRE en español argentino.
 8. Usá la herramienta execute_sql para ejecutar las consultas.
 9. Si la pregunta no es sobre los datos, respondé amablemente que solo podés ayudar con consultas a la base de datos.`
+
+  const systemPrompt = customPrompt
+    ? `${basePrompt}\n\nINSTRUCCIONES ADICIONALES:\n${customPrompt}`
+    : basePrompt
 
   const apiMessages: ApiMsg[] = [
     { role: 'system', content: systemPrompt },

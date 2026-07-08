@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { obtenerConfig, guardarOpenAIKey } from '@/actions/configuracion'
+import { obtenerConfig, guardarOpenAIKey, guardarPrompt, obtenerPrompt } from '@/actions/configuracion'
 import { actualizarCredenciales } from '@/actions/configuracion-actions'
 import { leerEncabezadosExcel, importarDesdeExcel } from '@/actions/importacion'
 import { CAMPOS_ALUMNO, type MapeoColumnas, type CampoAlumno } from '@/lib/campos-alumno'
@@ -13,6 +13,9 @@ export default function ConfiguracionPage() {
   const [openAIKeyInput, setOpenAIKeyInput] = useState('')
   const [openAIMsg, setOpenAIMsg] = useState('')
   const [openAIError, setOpenAIError] = useState(false)
+  const [chatbotPrompt, setChatbotPrompt] = useState('')
+  const [promptMsg, setPromptMsg] = useState('')
+  const [promptError, setPromptError] = useState(false)
 
   const [fileBase64, setFileBase64] = useState('')
   const [columnas, setColumnas] = useState<string[]>([])
@@ -22,10 +25,14 @@ export default function ConfiguracionPage() {
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    obtenerConfig().then((c) => {
+    Promise.all([
+      obtenerConfig(),
+      obtenerPrompt(),
+    ]).then(([c, prompt]) => {
       setDevEmail(c.dev_email ?? '')
       setHasPassword(c.dev_password_set === 'true')
       setHasOpenAIKey(c.openai_api_key_set === 'true')
+      setChatbotPrompt(prompt ?? '')
     })
   }, [])
 
@@ -266,6 +273,52 @@ export default function ConfiguracionPage() {
             className="btn-primary"
           >
             Guardar API key
+          </button>
+        </div>
+      </section>
+
+      <section className="card">
+        <div className="card-header">
+          <h2 className="text-base font-bold">Chatbot SQL — Prompt personalizado</h2>
+          <p className="text-sm text-muted">
+            Instrucciones adicionales que se agregan al prompt del asistente. Útil para
+            cambiar el tono, agregar contexto o afinar el comportamiento sin modificar código.
+            Dejalo vacío para usar el prompt por defecto.
+          </p>
+        </div>
+        <div className="card-body space-y-4">
+          <textarea
+            value={chatbotPrompt}
+            onChange={(e) => setChatbotPrompt(e.target.value)}
+            rows={6}
+            className="input font-mono text-xs"
+            placeholder="Ej: Priorizá siempre las tablas Archivo0Registro y Alumno. Respondé con tono formal."
+          />
+          {promptMsg && (
+            <div className={`rounded-lg border px-4 py-3 text-sm ${
+              promptError
+                ? 'border-red-200 bg-red-50 text-red-800'
+                : 'border-emerald-200 bg-emerald-50 text-emerald-800'
+            }`}>
+              {promptMsg}
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={async () => {
+              setPromptMsg('')
+              setPromptError(false)
+              try {
+                await guardarPrompt(chatbotPrompt)
+                setPromptMsg('Prompt guardado correctamente.')
+              } catch {
+                setPromptError(true)
+                setPromptMsg('Error al guardar el prompt.')
+              }
+            }}
+            className="btn-primary"
+          >
+            Guardar prompt
           </button>
         </div>
       </section>
