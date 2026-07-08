@@ -214,3 +214,8 @@ export async function exportarResultados(resultados: ResultadoBusqueda[]) {
 
   return buf.toString('base64')
 }
+
+export async function vaciarAlumnos() {
+  await requireAdmin()
+  await prisma.alumno.deleteMany()
+}

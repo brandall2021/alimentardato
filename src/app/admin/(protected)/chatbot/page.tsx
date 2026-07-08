@@ -421,7 +421,24 @@ export default function ChatbotPage() {
                       )}
 
                       {msg.rowCount !== undefined && (
-                        <p className="text-xs text-muted-light">{msg.rowCount} fila{msg.rowCount !== 1 ? 's' : ''}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs text-muted-light">{msg.rowCount} fila{msg.rowCount !== 1 ? 's' : ''}</p>
+                          {msg.data && msg.columns && msg.data.length > 0 && (
+                            <button
+                              onClick={() => {
+                                const csvContent = [msg.columns!.join(','), ...msg.data!.map((row) => msg.columns!.map((col) => String(row[col] ?? '').replace(/,/g, ' ')).join(','))].join('\n')
+                                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+                                const link = document.createElement('a')
+                                link.href = URL.createObjectURL(blob)
+                                link.download = 'resultados.csv'
+                                link.click()
+                              }}
+                              className="text-xs text-blue-500 hover:text-blue-700"
+                            >
+                              Descargar CSV
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
                   )}

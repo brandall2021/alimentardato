@@ -6,6 +6,7 @@ import {
   buscarPorFiltros,
   exportarResultados,
   actualizarContacto,
+  vaciarAlumnos,
   type ResultadoBusqueda,
   type FiltrosAvanzados,
 } from '@/actions/alumnos'
@@ -18,6 +19,7 @@ export default function AlumnosPage() {
   const [editandoId, setEditandoId] = useState<string | null>(null)
   const [editCampo, setEditCampo] = useState<'email' | 'telefono' | null>(null)
   const [editValor, setEditValor] = useState('')
+  const [vaciando, setVaciando] = useState(false)
 
   const handleBuscar = useCallback(async () => {
     if (!valores.trim() && !filtros.plan && !filtros.anoIngreso && !filtros.estadoInscripcion) return
@@ -213,17 +215,39 @@ export default function AlumnosPage() {
       {resultados && (
         <section className="card">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-6 py-4">
-            <h2 className="text-base font-bold">
-              Resultados ({resultados.length})
-            </h2>
-            <p className="text-sm text-muted">
-              {encontrados} encontrado{encontrados !== 1 ? 's' : ''}
-              {noEncontrados > 0 && (
-                <span className="ml-1 text-amber-600">
-                  · {noEncontrados} no encontrado{noEncontrados !== 1 ? 's' : ''}
-                </span>
-              )}
-            </p>
+            <div className="flex items-center gap-3">
+              <h2 className="text-base font-bold">
+                Resultados ({resultados.length})
+              </h2>
+              <p className="text-sm text-muted">
+                {encontrados} encontrado{encontrados !== 1 ? 's' : ''}
+                {noEncontrados > 0 && (
+                  <span className="ml-1 text-amber-600">
+                    · {noEncontrados} no encontrado{noEncontrados !== 1 ? 's' : ''}
+                  </span>
+                )}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={async () => {
+                  if (!confirm('¿Estás seguro de vaciar toda la tabla de alumnos? Esta acción no se puede deshacer.')) return
+                  setVaciando(true)
+                  try {
+                    await vaciarAlumnos()
+                    setResultados(null)
+                    setValores('')
+                    setFiltros({})
+                  } finally {
+                    setVaciando(false)
+                  }
+                }}
+                disabled={vaciando}
+                className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-50"
+              >
+                {vaciando ? 'Vaciando...' : 'Vaciar tabla alumnos'}
+              </button>
+            </div>
           </div>
 
           {resultados.length === 0 ? (
