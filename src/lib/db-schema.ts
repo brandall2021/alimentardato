@@ -134,3 +134,68 @@ export async function getCachedSchema(): Promise<string> {
   cachedSchema = await getDatabaseSchema()
   return cachedSchema
 }
+
+export type TableInfo = {
+  name: string
+  columns: { name: string; type: string; nullable: boolean; isPk: boolean }[]
+  rowCount: number
+}
+
+export async function getTablesList(): Promise<TableInfo[]> {
+  const cols = await prisma.$queryRaw<Row[]>`
+    SELECT
+      t.table_name,
+      c.column_name,
+      c.data_type,
+      c.is_nullable,
+      c.ordinal_position
+    FROM information_schema.tables t
+    JOIN information_schema.columns c ON t.table_name = c.table_name
+    WHERE t.table_schema = 'public'
+      AND t.table_type = 'BASE TABLE'
+    ORDER BY t.table_name, c.ordinal_position
+  `
+
+  const pkRows = await prisma.$queryRaw<Row[]>`
+    SELECT
+      tc.table_name,
+      kcu.column_name
+    FROM information_schema.table_constraints tc
+    JOIN information_schema.key_column_usage kcu
+      ON tc.constraint_name = kcu.constraint_name
+    WHERE tc.constraint_type = 'PRIMARY KEY'
+      AND tc.table_schema = 'public'
+    ORDER BY tc.table_name, kcu.column_name
+  `
+
+  const pkSet = new Set<string>()
+  for (const row of pkRows) {
+    pkSet.add(`${row.table_name}.${row.column_name}`)
+  }
+
+  const countRows = await prisma.$queryRaw<Row[]>`
+    SELECT relname AS table_name, n_live_tup AS row_count
+    FROM pg_stat_user_tables
+    ORDER BY relname
+  `
+  const countMap = new Map<string, number>()
+  for (const row of countRows) {
+    countMap.set(row.table_name as string, Number(row.row_count))
+  }
+
+  const tableMap = new Map<string, TableInfo>()
+  for (const row of cols) {
+    const table = row.table_name as string
+    if (!tableMap.has(table)) {
+      tableMap.set(table, { name: table, columns: [], rowCount: countMap.get(table) ?? 0 })
+    }
+    tableMap.get(table)!.columns.push({
+      name: row.column_name as string,
+      type: row.data_type as string,
+      nullable: row.is_nullable === 'YES',
+      isPk: pkSet.has(`${table}.${row.column_name}`),
+    })
+  }
+
+  return Array.from(tableMap.values())
+}

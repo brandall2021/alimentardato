@@ -4,6 +4,7 @@ import { Pool } from 'pg'
 import { getCachedSchema } from '@/lib/db-schema'
 import { obtenerOpenAIKey } from '@/actions/configuracion'
 import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
 
 async function getOpenAI() {
   const envKey = process.env.OPENAI_API_KEY
@@ -74,11 +75,11 @@ const TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
 
 export async function POST(req: Request) {
   const session = await auth()
-  if (!session?.user) {
+  if (!session?.user?.id) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
 
-  const { messages }: { messages: Msg[] } = await req.json()
+  const { messages, sessionId: rawSessionId }: { messages: Msg[]; sessionId?: string } = await req.json()
   if (!messages?.length) {
     return NextResponse.json({ error: 'Mensaje requerido' }, { status: 400 })
   }
@@ -154,6 +155,41 @@ REGLAS:
       finalContent = followUp.choices[0].message.content ?? ''
     }
 
+    let sessionId: string | null = rawSessionId ?? null
+
+    if (sessionId) {
+      const chat = await prisma.chatSession.findUnique({ where: { id: sessionId } })
+      if (chat && chat.userId === session.user.id) {
+        const firstUserMsg = messages.find((m) => m.role === 'user')
+        if (chat.title === 'Nueva consulta' && firstUserMsg) {
+          const newTitle = firstUserMsg.content.slice(0, 80) + (firstUserMsg.content.length > 80 ? '...' : '')
+          await prisma.chatSession.update({ where: { id: sessionId }, data: { title: newTitle } })
+        }
+
+        const lastUserMsg = messages[messages.length - 1]
+        if (lastUserMsg?.role === 'user') {
+          await prisma.chatMessage.create({
+            data: { sessionId, role: 'user', content: lastUserMsg.content },
+          })
+        }
+
+        await prisma.chatMessage.create({
+          data: {
+            sessionId,
+            role: 'assistant',
+            content: finalContent,
+            sql: sql || null,
+            data: data ? JSON.parse(JSON.stringify(data)) : undefined,
+            columns: columns ? JSON.stringify(columns) : null,
+            rowCount: rowCount || null,
+            error: sqlError,
+          },
+        })
+
+        await prisma.chatSession.update({ where: { id: sessionId }, data: { updatedAt: new Date() } })
+      }
+    }
+
     return NextResponse.json({
       role: 'assistant',
       content: finalContent,
@@ -162,6 +198,7 @@ REGLAS:
       columns: columns ?? undefined,
       rowCount: rowCount || undefined,
       error: sqlError,
+      sessionId,
     })
   } catch (e) {
     const message = e instanceof Error ? e.message : 'Error desconocido'

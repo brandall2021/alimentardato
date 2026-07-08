@@ -53,6 +53,7 @@ model User {
   accounts      Account[]
   sessions      Session[]
   notificaciones Notification[]
+  chatSessions  ChatSession[]
 }
 
 model VerificationToken {
@@ -369,4 +370,33 @@ model CuadroEstadistico {
   createdAt DateTime @default(now())
 
   @@unique([numero])
+}
+
+model ChatSession {
+  id        String   @id @default(cuid())
+  title     String   @default("Nueva consulta")
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  messages  ChatMessage[]
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([updatedAt])
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  sessionId String
+  role      String
+  content   String   @db.Text
+  sql       String?  @db.Text
+  data      Json?
+  columns   String?
+  rowCount  Int?
+  error     String?  @db.Text
+  createdAt DateTime @default(now())
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
 }
