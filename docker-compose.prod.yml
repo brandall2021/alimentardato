@@ -1,0 +1,38 @@
+# Despliegue en Dokploy (source: git + docker-compose).
+# Los valores reales van en el entorno del compose en Dokploy (${VAR} se
+# interpolan desde el .env del compose) para no filtrar secretos al repo.
+services:
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: migrate
+    restart: "no"
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+    networks:
+      - dokploy-network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      NEXTAUTH_URL: ${NEXTAUTH_URL}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      AUTH_TRUST_HOST: "true"
+      DEV_EMAIL: ${DEV_EMAIL}
+      DEV_PASSWORD: ${DEV_PASSWORD}
+    networks:
+      dokploy-network:
+        aliases:
+          - app
+
+networks:
+  dokploy-network:
+    external: true

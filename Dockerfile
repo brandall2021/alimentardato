@@ -6,6 +6,12 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
 RUN npm install -g pnpm && pnpm install
 
+FROM deps AS migrate
+WORKDIR /app
+COPY prisma.config.ts ./
+COPY prisma ./prisma
+CMD ["npx", "prisma", "migrate", "deploy"]
+
 FROM base AS builder
 RUN apk add --no-cache openssl
 WORKDIR /app
