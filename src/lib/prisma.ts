@@ -5,12 +5,13 @@ const globalForPrisma = globalThis as unknown as { prisma: PrismaClient }
 
 function createPrismaClient() {
   const connectionString = process.env.DATABASE_URL
-  if (!connectionString) throw new Error('DATABASE_URL is not set')
   let schema: string | undefined
   try {
-    schema = new URL(connectionString).searchParams.get('schema') ?? undefined
+    if (connectionString) {
+      schema = new URL(connectionString).searchParams.get('schema') ?? undefined
+    }
   } catch {}
-  const adapter = new PrismaPg({ connectionString }, { schema })
+  const adapter = new PrismaPg({ connectionString: connectionString as string }, { schema })
   return new PrismaClient({ adapter })
 }
 
