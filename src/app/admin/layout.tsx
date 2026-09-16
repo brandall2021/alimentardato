@@ -67,6 +67,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                 Alumnos
               </Link>
               <Link
+                href="/admin/tablas"
+                className="text-sm font-semibold text-gray-500 transition hover:text-brand"
+              >
+                Tablas
+              </Link>
+              <Link
                 href="/admin/consultas"
                 className="text-sm font-semibold text-gray-500 transition hover:text-brand"
               >
