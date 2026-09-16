@@ -28,6 +28,13 @@ export const importarExcelSchema = z.string().min(1).max(MAX_BASE64).refine(
   { message: 'El archivo excede el tamaño máximo' }
 )
 
+export const importarSIUSchema = z.object({
+  archivo0: z.string().min(1, 'archivo_0 requerido').max(MAX_BASE64),
+  archivo1: z.string().min(1, 'archivo_1 requerido').max(MAX_BASE64),
+  archivo2: z.string().min(1, 'archivo_2 requerido').max(MAX_BASE64),
+  archivo3: z.string().min(1, 'archivo_3 requerido').max(MAX_BASE64),
+})
+
 export const paginacionSchema = z.object({
   pagina: z.number().int().min(1).max(MAX_PAGINA).default(1),
   porPagina: z.number().int().min(1).max(MAX_POR_PAGINA).default(50),

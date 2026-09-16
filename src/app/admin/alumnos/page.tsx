@@ -9,7 +9,7 @@ import {
   type ResultadoBusqueda,
   type FiltrosAvanzados,
 } from '@/actions/alumnos'
-import { importarDesdeExcel } from '@/actions/importacion'
+import { importarDesdeExcel, importarDesdeSIU } from '@/actions/importacion'
 
 export default function AlumnosPage() {
   const [valores, setValores] = useState('')
@@ -22,6 +22,10 @@ export default function AlumnosPage() {
   const [editCampo, setEditCampo] = useState<'email' | 'telefono' | null>(null)
   const [editValor, setEditValor] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
+  const [mostrarSIU, setMostrarSIU] = useState(false)
+  const [siuArchivos, setSiuArchivos] = useState<{ archivo0: File | null; archivo1: File | null; archivo2: File | null; archivo3: File | null }>({ archivo0: null, archivo1: null, archivo2: null, archivo3: null })
+  const [importandoSIU, setImportandoSIU] = useState(false)
+  const [mensajeSIU, setMensajeSIU] = useState('')
 
   const handleBuscar = useCallback(async () => {
     if (!valores.trim() && !filtros.plan && !filtros.anoIngreso && !filtros.estadoInscripcion) return
@@ -97,6 +101,39 @@ export default function AlumnosPage() {
     setEditCampo(null)
     setEditValor('')
   }, [])
+
+  const handleSiuArchivo = useCallback((key: keyof typeof siuArchivos, file: File | null) => {
+    setSiuArchivos((prev) => ({ ...prev, [key]: file }))
+  }, [])
+
+  const handleImportSIU = useCallback(async () => {
+    const { archivo0, archivo1, archivo2, archivo3 } = siuArchivos
+    if (!archivo0 || !archivo1 || !archivo2 || !archivo3) {
+      setMensajeSIU('Cargá los 4 archivos antes de importar.')
+      return
+    }
+    setImportandoSIU(true)
+    setMensajeSIU('')
+    try {
+      const toBase64 = (f: File) =>
+        f.arrayBuffer().then((b) => Buffer.from(b).toString('base64'))
+      const [b0, b1, b2, b3] = await Promise.all([
+        toBase64(archivo0),
+        toBase64(archivo1),
+        toBase64(archivo2),
+        toBase64(archivo3),
+      ])
+      const res = await importarDesdeSIU({ archivo0: b0, archivo1: b1, archivo2: b2, archivo3: b3 })
+      setMensajeSIU(
+        `Alumnos: ${res.alumnos} · Inscripciones: ${res.inscripciones} · Exámenes: ${res.examenes} · Materias: ${res.materias}` +
+        (res.errores > 0 ? ` · Errores: ${res.errores}` : '')
+      )
+    } catch (err) {
+      setMensajeSIU(`Error: ${err instanceof Error ? err.message : 'desconocido'}`)
+    } finally {
+      setImportandoSIU(false)
+    }
+  }, [siuArchivos])
 
   function renderContacto(r: ResultadoBusqueda, campo: 'email' | 'telefono') {
     const valor = r[campo]
@@ -176,8 +213,58 @@ export default function AlumnosPage() {
               disabled={importando}
             />
           </label>
+          <button
+            onClick={() => setMostrarSIU(!mostrarSIU)}
+            className="rounded-md border border-brand bg-white px-3 py-1.5 text-sm font-semibold text-brand transition hover:bg-red-50"
+          >
+            {mostrarSIU ? 'Ocultar SIU' : 'Importar SIU'}
+          </button>
         </div>
       </header>
+
+      {mostrarSIU && (
+        <section className="rounded-md border border-brand/30 bg-red-50/50 shadow-sm">
+          <div className="border-b border-brand/20 px-5 py-4">
+            <h2 className="text-base font-bold text-brand">Importar desde SIU Araucano</h2>
+            <p className="mt-1 text-sm text-gray-600">
+              Cargá los 4 archivos pipe-delimited (.txt) generados por el SIU.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-4 px-5 py-4 sm:grid-cols-2">
+            {([
+              ['archivo0', 'archivo_0.txt — Personas'],
+              ['archivo1', 'archivo_1.txt — Inscripciones'],
+              ['archivo2', 'archivo_2.txt — Exámenes aprobados'],
+              ['archivo3', 'archivo_3.txt — Exámenes regularizados'],
+            ] as const).map(([key, label]) => (
+              <div key={key}>
+                <label className="mb-1 block text-sm font-medium text-gray-700">{label}</label>
+                <input
+                  type="file"
+                  accept=".txt"
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-brand file:px-3 file:py-1 file:text-sm file:font-semibold file:text-white hover:file:bg-blue-700"
+                  onChange={(e) => handleSiuArchivo(key, e.target.files?.[0] ?? null)}
+                />
+                {siuArchivos[key] && (
+                  <p className="mt-1 text-xs text-gray-500">{siuArchivos[key]!.name}</p>
+                )}
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center gap-3 border-t border-brand/20 px-5 py-4">
+            <button
+              onClick={handleImportSIU}
+              disabled={importandoSIU}
+              className="rounded-md bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+            >
+              {importandoSIU ? 'Importando...' : 'Importar SIU'}
+            </button>
+            {mensajeSIU && (
+              <span className="text-sm text-gray-700">{mensajeSIU}</span>
+            )}
+          </div>
+        </section>
+      )}
 
       {mensajeImport && (
         <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">

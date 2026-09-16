@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/auth-guard'
-import { importarExcelSchema, validarImportacionRows } from '@/lib/validations'
+import { importarExcelSchema, importarSIUSchema, validarImportacionRows } from '@/lib/validations'
 import { revalidatePath } from 'next/cache'
 
 type TipoDocumento = 'DNI' | 'LE' | 'LC' | 'PASAPORTE'
@@ -146,4 +146,319 @@ export async function importarDesdeExcel(base64: string): Promise<{
 
   revalidatePath('/admin/alumnos')
   return { importados: ok, errores: err, detalles: resultados }
+}
+
+const TIPO_DOC_SIU: Record<string, TipoDocumento> = {
+  '0': 'DNI',
+  '1': 'DNT',
+  '2': 'CI',
+  '18': 'LE',
+  '19': 'LC',
+  '20': 'CM',
+  '21': 'CD',
+  '22': 'CC',
+  '23': 'CDI',
+  '90': 'PASAPORTE',
+}
+
+function parsearSIU(base64: string): string[] {
+  return Buffer.from(base64, 'base64')
+    .toString('utf-8')
+    .split(/\r?\n/)
+    .filter((l) => l.trim().length > 0)
+}
+
+function parsearAlumnosSIU(lineas: string[]) {
+  return lineas
+    .map((linea, i) => {
+      const f = linea.split('|')
+      if (f.length < 8) return null
+      const numDoc = f[3]?.trim()
+      if (!numDoc) return null
+      return {
+        tipoDocumento: (TIPO_DOC_SIU[f[5]?.trim()] ?? 'DNI') as TipoDocumento,
+        numeroDocumento: numDoc,
+        apellidoNombre: `${f[0] ?? ''} ${f[1] ?? ''}`.trim(),
+        sexo: parseInt(f[2] ?? '') || null,
+        cuit: f[4]?.trim() || null,
+        fechaNacimiento: parsearFechaSIU(f[6]),
+        legajo: f[7]?.trim() || null,
+        plan: f[8]?.trim() || null,
+        anoIngreso: parseInt(f[9] ?? '') || null,
+        estadoInscripcion: f[10]?.trim() || null,
+        telefono: [f[13]?.trim(), f[14]?.trim()]
+          .filter((v) => v && v !== '99999999' && v !== '99999')
+          .join(' ') || null,
+      }
+    })
+    .filter(Boolean) as Array<{
+    tipoDocumento: TipoDocumento
+    numeroDocumento: string
+    apellidoNombre: string
+    sexo: number | null
+    cuit: string | null
+    fechaNacimiento: Date | null
+    legajo: string | null
+    plan: string | null
+    anoIngreso: number | null
+    estadoInscripcion: string | null
+    telefono: string | null
+  }>
+}
+
+function parsearInscripcionesSIU(lineas: string[]) {
+  return lineas
+    .map((linea) => {
+      const f = linea.split('|')
+      if (f.length < 8) return null
+      const numDoc = f[1]?.trim()
+      if (!numDoc) return null
+      const fechaStr = f[6]?.trim()
+      if (!fechaStr || fechaStr.length < 8) return null
+      return {
+        tipoDocumento: (TIPO_DOC_SIU[f[0]?.trim()] ?? 'DNI') as TipoDocumento,
+        numeroDocumento: numDoc,
+        cuit: f[2]?.trim() || null,
+        planCodigo: parseInt(f[3] ?? '') || 0,
+        sedeCodigo: parseInt(f[4] ?? '') || 0,
+        anio: parseInt(f[5] ?? '') || 0,
+        fecha: parsearFechaSIU(fechaStr),
+        turno: parseInt(f[7] ?? '') || null,
+        regularidad: f[11]?.trim() || null,
+      }
+    })
+    .filter(Boolean) as Array<{
+    tipoDocumento: TipoDocumento
+    numeroDocumento: string
+    cuit: string | null
+    planCodigo: number
+    sedeCodigo: number
+    anio: number
+    fecha: Date
+    turno: number | null
+    regularidad: string | null
+  }>
+}
+
+function parsearExamenesSIU(lineas: string[]) {
+  return lineas
+    .map((linea) => {
+      const f = linea.split('|')
+      if (f.length < 15) return null
+      const numDoc = f[1]?.trim()
+      if (!numDoc) return null
+      const fechaStr = f[5]?.trim()
+      if (!fechaStr || fechaStr.length < 8) return null
+      return {
+        tipoDocumento: (TIPO_DOC_SIU[f[0]?.trim()] ?? 'DNI') as TipoDocumento,
+        numeroDocumento: numDoc,
+        cuit: f[2]?.trim() || null,
+        planCodigo: parseInt(f[3] ?? '') || 0,
+        sedeCodigo: parseInt(f[4] ?? '') || 0,
+        fechaExamen: parsearFechaSIU(fechaStr),
+        turno: parseInt(f[6] ?? '') || null,
+        materiaCodigo: f[7]?.trim() ?? '',
+        materiaNombre: f[8]?.trim() ?? '',
+        cargaHoraria: parseInt(f[9] ?? '') || null,
+        aprobadas: parseInt(f[10] ?? '') || null,
+        totalMaterias: parseInt(f[11] ?? '') || null,
+        periodo: f[13]?.trim() || null,
+        actaCodigo: f[14]?.trim() || null,
+        numeroActa: f[15]?.trim() || null,
+      }
+    })
+    .filter(Boolean) as Array<{
+    tipoDocumento: TipoDocumento
+    numeroDocumento: string
+    cuit: string | null
+    planCodigo: number
+    sedeCodigo: number
+    fechaExamen: Date
+    turno: number | null
+    materiaCodigo: string
+    materiaNombre: string
+    cargaHoraria: number | null
+    aprobadas: number | null
+    totalMaterias: number | null
+    periodo: string | null
+    actaCodigo: string | null
+    numeroActa: string | null
+  }>
+}
+
+function parsearFechaSIU(s: string): Date {
+  const v = s?.trim()
+  if (!v || v.length < 8) return new Date(0)
+  return new Date(+v.slice(0, 4), +v.slice(4, 6) - 1, +v.slice(6, 8))
+}
+
+const BATCH = 500
+
+export async function importarDesdeSIU(archivos: {
+  archivo0: string
+  archivo1: string
+  archivo2: string
+  archivo3: string
+}): Promise<{
+  alumnos: number
+  inscripciones: number
+  examenes: number
+  materias: number
+  errores: number
+}> {
+  await requireAdmin()
+  importarSIUSchema.parse(archivos)
+
+  const lineas0 = parsearSIU(archivos.archivo0)
+  const lineas1 = parsearSIU(archivos.archivo1)
+  const lineas2 = parsearSIU(archivos.archivo2)
+  const lineas3 = parsearSIU(archivos.archivo3)
+
+  const alumnosRaw = parsearAlumnosSIU(lineas0)
+  const inscripcionesRaw = parsearInscripcionesSIU(lineas1)
+  const examenesRaw = [...parsearExamenesSIU(lineas2), ...parsearExamenesSIU(lineas3)]
+
+  let alumnosOk = 0
+  let inscripcionesOk = 0
+  let examenesOk = 0
+  let materiasOk = 0
+  let errores = 0
+
+  for (let i = 0; i < alumnosRaw.length; i += BATCH) {
+    try {
+      const batch = alumnosRaw.slice(i, i + BATCH)
+      const r = await prisma.alumno.createMany({ data: batch, skipDuplicates: true })
+      alumnosOk += r.count
+    } catch {
+      errores += Math.min(BATCH, alumnosRaw.length - i)
+    }
+  }
+
+  const alumnos = await prisma.alumno.findMany({
+    select: { id: true, numeroDocumento: true, tipoDocumento: true },
+  })
+  const alumnoMap = new Map(alumnos.map((a) => [a.numeroDocumento, a]))
+
+  const inscripcionesData = inscripcionesRaw
+    .map((raw) => {
+      const alumno = alumnoMap.get(raw.numeroDocumento)
+      if (!alumno) return null
+      return {
+        alumnoId: alumno.id,
+        tipoDocumento: alumno.tipoDocumento,
+        numeroDocumento: raw.numeroDocumento,
+        cuit: raw.cuit,
+        planCodigo: raw.planCodigo,
+        sedeCodigo: raw.sedeCodigo,
+        anio: raw.anio,
+        fecha: raw.fecha,
+        turno: raw.turno,
+        regularidad: raw.regularidad,
+      }
+    })
+    .filter(Boolean) as Array<{
+    alumnoId: string
+    tipoDocumento: TipoDocumento
+    numeroDocumento: string
+    cuit: string | null
+    planCodigo: number
+    sedeCodigo: number
+    anio: number
+    fecha: Date
+    turno: number | null
+    regularidad: string | null
+  }>
+
+  for (let i = 0; i < inscripcionesData.length; i += BATCH) {
+    try {
+      const batch = inscripcionesData.slice(i, i + BATCH)
+      const r = await prisma.inscripcion.createMany({ data: batch, skipDuplicates: true })
+      inscripcionesOk += r.count
+    } catch {
+      errores += Math.min(BATCH, inscripcionesData.length - i)
+    }
+  }
+
+  const materiasMap = new Map<string, { codigo: string; nombre: string; cargaHoraria: number | null }>()
+  for (const e of examenesRaw) {
+    if (e.materiaCodigo && !materiasMap.has(e.materiaCodigo)) {
+      materiasMap.set(e.materiaCodigo, {
+        codigo: e.materiaCodigo,
+        nombre: e.materiaNombre,
+        cargaHoraria: e.cargaHoraria,
+      })
+    }
+  }
+
+  const materiasArray = Array.from(materiasMap.values())
+  for (let i = 0; i < materiasArray.length; i += BATCH) {
+    try {
+      const batch = materiasArray.slice(i, i + BATCH)
+      const r = await prisma.materia.createMany({ data: batch, skipDuplicates: true })
+      materiasOk += r.count
+    } catch {
+      errores += Math.min(BATCH, materiasArray.length - i)
+    }
+  }
+
+  const examenesData = examenesRaw
+    .map((raw) => {
+      const alumno = alumnoMap.get(raw.numeroDocumento)
+      if (!alumno) return null
+      return {
+        alumnoId: alumno.id,
+        tipoDocumento: alumno.tipoDocumento,
+        numeroDocumento: raw.numeroDocumento,
+        cuit: raw.cuit,
+        planCodigo: raw.planCodigo,
+        sedeCodigo: raw.sedeCodigo,
+        fechaExamen: raw.fechaExamen,
+        turno: raw.turno,
+        materiaCodigo: raw.materiaCodigo,
+        materiaNombre: raw.materiaNombre,
+        cargaHoraria: raw.cargaHoraria,
+        aprobadas: raw.aprobadas,
+        totalMaterias: raw.totalMaterias,
+        periodo: raw.periodo,
+        actaCodigo: raw.actaCodigo,
+        numeroActa: raw.numeroActa,
+      }
+    })
+    .filter(Boolean) as Array<{
+    alumnoId: string
+    tipoDocumento: TipoDocumento
+    numeroDocumento: string
+    cuit: string | null
+    planCodigo: number
+    sedeCodigo: number
+    fechaExamen: Date
+    turno: number | null
+    materiaCodigo: string
+    materiaNombre: string
+    cargaHoraria: number | null
+    aprobadas: number | null
+    totalMaterias: number | null
+    periodo: string | null
+    actaCodigo: string | null
+    numeroActa: string | null
+  }>
+
+  for (let i = 0; i < examenesData.length; i += BATCH) {
+    try {
+      const batch = examenesData.slice(i, i + BATCH)
+      const r = await prisma.examen.createMany({ data: batch, skipDuplicates: true })
+      examenesOk += r.count
+    } catch {
+      errores += Math.min(BATCH, examenesData.length - i)
+    }
+  }
+
+  revalidatePath('/admin/alumnos')
+  return {
+    alumnos: alumnosOk,
+    inscripciones: inscripcionesOk,
+    examenes: examenesOk,
+    materias: materiasOk,
+    errores,
+  }
 }

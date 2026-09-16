@@ -12,6 +12,13 @@ enum TipoDocumento {
   LE
   LC
   PASAPORTE
+  DNT
+  CI
+  CUIT_CUIL
+  CM
+  CD
+  CC
+  CDI
 }
 
 model Account {
@@ -100,6 +107,10 @@ model Alumno {
   totalActividades    Int?
   estadoInscripcion   String?
   paisOrigen          String?
+  sexo                Int?
+  cuit                String?
+  inscripciones       Inscripcion[]
+  examenes            Examen[]
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
 
@@ -110,4 +121,66 @@ model Alumno {
   @@index([plan])
   @@index([anoIngreso])
   @@index([estadoInscripcion])
+  @@index([cuit])
+}
+
+model Materia {
+  id            String   @id @default(cuid())
+  codigo        String   @unique
+  nombre        String
+  cargaHoraria  Int?
+  obligatoriedad Int?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Inscripcion {
+  id              String   @id @default(cuid())
+  alumnoId        String
+  alumno          Alumno   @relation(fields: [alumnoId], references: [id], onDelete: Cascade)
+  tipoDocumento   TipoDocumento
+  numeroDocumento String
+  cuit            String?
+  planCodigo      Int
+  sedeCodigo      Int
+  anio            Int
+  fecha           DateTime
+  turno           Int?
+  regularidad     String?
+  createdAt       DateTime @default(now())
+
+  @@unique([alumnoId, planCodigo, anio, turno])
+  @@index([alumnoId])
+  @@index([planCodigo])
+  @@index([anio])
+  @@index([numeroDocumento])
+}
+
+model Examen {
+  id              String    @id @default(cuid())
+  alumnoId        String
+  alumno          Alumno    @relation(fields: [alumnoId], references: [id], onDelete: Cascade)
+  tipoDocumento   TipoDocumento
+  numeroDocumento String
+  cuit            String?
+  planCodigo      Int
+  sedeCodigo      Int
+  fechaExamen     DateTime
+  turno           Int?
+  materiaCodigo   String
+  materiaNombre   String
+  cargaHoraria    Int?
+  aprobadas       Int?
+  totalMaterias   Int?
+  periodo         String?
+  actaCodigo      String?
+  numeroActa      String?
+  createdAt       DateTime  @default(now())
+
+  @@unique([alumnoId, fechaExamen, materiaCodigo])
+  @@index([alumnoId])
+  @@index([materiaCodigo])
+  @@index([numeroDocumento])
+  @@index([periodo])
+  @@index([fechaExamen])
 }
