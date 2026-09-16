@@ -336,7 +336,7 @@ export default async function TablasPage({ searchParams }: { searchParams: Searc
               {PAGE_SIZES.map((s) => (
                 <a
                   key={s}
-                  href={`${base}&pp=${s}&p=${paginaReal}`}
+                  href={`${baseUrl(tab, s, q)}&p=${paginaReal}`}
                   className={`rounded px-2 py-0.5 text-xs font-medium ${
                     s === pp ? 'bg-brand text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
