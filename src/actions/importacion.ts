@@ -5,7 +5,7 @@ import { requireAdmin } from '@/lib/auth-guard'
 import { importarExcelSchema, importarSIUSchema, validarImportacionRows } from '@/lib/validations'
 import { revalidatePath } from 'next/cache'
 
-type TipoDocumento = 'DNI' | 'LE' | 'LC' | 'PASAPORTE'
+type TipoDocumento = 'DNI' | 'LE' | 'LC' | 'PASAPORTE' | 'DNT' | 'CI' | 'CUIT_CUIL' | 'CM' | 'CD' | 'CC' | 'CDI'
 
 function detectarTipoDocumento(val: string): TipoDocumento {
   const v = val.toUpperCase().trim()
