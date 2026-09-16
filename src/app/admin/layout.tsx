@@ -10,7 +10,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <div className="flex min-h-screen items-center justify-center bg-slate-50">
         <div className="text-center">
           <p className="text-gray-500">No autorizado.</p>
-          <Link href="/admin/login" className="text-accent hover:underline">
+          <Link href="/login" className="text-accent hover:underline">
             Iniciar sesión
           </Link>
         </div>
@@ -39,7 +39,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <form
               action={async () => {
                 'use server'
-                await signOut({ redirectTo: '/admin/login' })
+                await signOut({ redirectTo: '/login' })
               }}
             >
               <button
