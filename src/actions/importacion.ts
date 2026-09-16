@@ -161,9 +161,14 @@ const TIPO_DOC_SIU: Record<string, TipoDocumento> = {
   '90': 'PASAPORTE',
 }
 
+const SIU_DECODER = typeof TextDecoder !== 'undefined'
+  ? new (TextDecoder as typeof TextDecoder)('windows-1252')
+  : null
+
 function parsearSIU(base64: string): string[] {
-  return Buffer.from(base64, 'base64')
-    .toString('utf-8')
+  const buf = Buffer.from(base64, 'base64')
+  const text = SIU_DECODER ? SIU_DECODER.decode(buf) : buf.toString('utf-8')
+  return text
     .split(/\r?\n/)
     .filter((l) => l.trim().length > 0)
 }
