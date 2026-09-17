@@ -136,10 +136,10 @@ export default async function TablasPage({ searchParams }: { searchParams: Searc
   if (tab === 'alumno') {
     const where = q
       ? { OR: [
-          { apellidoNombre: { contains: q, mode: 'insensitive' } },
-          { numeroDocumento: { contains: q, mode: 'insensitive' } },
-          { cuit: { contains: q, mode: 'insensitive' } },
-          { legajo: { contains: q, mode: 'insensitive' } },
+          { apellidoNombre: { contains: q, mode: 'insensitive' as const } },
+          { numeroDocumento: { contains: q, mode: 'insensitive' as const } },
+          { cuit: { contains: q, mode: 'insensitive' as const } },
+          { legajo: { contains: q, mode: 'insensitive' as const } },
         ] }
       : undefined
     const [totalFiltrado, rows] = await Promise.all([
@@ -150,9 +150,9 @@ export default async function TablasPage({ searchParams }: { searchParams: Searc
   } else if (tab === 'inscripcion') {
     const where = q
       ? { OR: [
-          { numeroDocumento: { contains: q, mode: 'insensitive' } },
-          { regularidad: { contains: q, mode: 'insensitive' } },
-          { cuit: { contains: q, mode: 'insensitive' } },
+          { numeroDocumento: { contains: q, mode: 'insensitive' as const } },
+          { regularidad: { contains: q, mode: 'insensitive' as const } },
+          { cuit: { contains: q, mode: 'insensitive' as const } },
         ] }
       : undefined
     const [totalFiltrado, rows] = await Promise.all([
@@ -169,10 +169,10 @@ export default async function TablasPage({ searchParams }: { searchParams: Searc
   } else if (tab === 'examen') {
     const where = q
       ? { OR: [
-          { numeroDocumento: { contains: q, mode: 'insensitive' } },
-          { materiaCodigo: { contains: q, mode: 'insensitive' } },
-          { materiaNombre: { contains: q, mode: 'insensitive' } },
-          { periodo: { contains: q, mode: 'insensitive' } },
+          { numeroDocumento: { contains: q, mode: 'insensitive' as const } },
+          { materiaCodigo: { contains: q, mode: 'insensitive' as const } },
+          { materiaNombre: { contains: q, mode: 'insensitive' as const } },
+          { periodo: { contains: q, mode: 'insensitive' as const } },
         ] }
       : undefined
     const [totalFiltrado, rows] = await Promise.all([
@@ -187,7 +187,7 @@ export default async function TablasPage({ searchParams }: { searchParams: Searc
     ])
     counted = { totalFiltrado, rows }
   } else {
-    const where = q ? { OR: [{ codigo: { contains: q, mode: 'insensitive' } }, { nombre: { contains: q, mode: 'insensitive' } }] } : undefined
+    const where = q ? { OR: [{ codigo: { contains: q, mode: 'insensitive' as const } }, { nombre: { contains: q, mode: 'insensitive' as const } }] } : undefined
     const [totalFiltrado, rows] = await Promise.all([
       prisma.materia.count({ where }),
       prisma.materia.findMany({ where, orderBy: { codigo: 'asc' }, skip: (pagina - 1) * pp, take: pp }),
